@@ -1,0 +1,35 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_34
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 14: Yeni bir fonksiyon yaz#n. Kullan#c#dan 20 karakter uzunlu#unda 3 adet text als#n. Bütün
+*&textleri birle#tirsin ve tek bir text halinde kullan#c#ya geri versin. Ayr#ca yeni olu#an textin içerisinde kaç
+*&karakter oldu#u bilgisini de versin. Fonksiyonu yeni yazaca##n#z bir raporda kullan#n. Olu#an texti ve
+*&karakter say#s#n# ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_34.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+  PARAMETERS: p_text1 TYPE c LENGTH 20 LOWER CASE,
+              p_text2 TYPE c LENGTH 20  LOWER CASE,
+              p_text3 TYPE c LENGTH 20  LOWER CASE.
+SELECTION-SCREEN END OF BLOCK b1.
+
+DATA: gv_result TYPE c LENGTH 20.
+
+START-OF-SELECTION.
+
+
+IF p_text1 IS INITIAL OR p_text2 IS INITIAL OR p_text3 IS INITIAL.
+  MESSAGE 'Please fill the all areas with correctly.' TYPE 'S' DISPLAY LIKE 'E'.
+  exit.
+ENDIF.
+
+CALL FUNCTION 'ZMT_FM_02'
+   EXPORTING
+     text1         = p_text1
+     text2         = p_text2
+     text3         = p_text3
+  IMPORTING
+    RESULT        =  gv_result
+           .
+WRITE : / | Concatination result is : { gv_result } and count of char : { strlen( gv_result ) } |.

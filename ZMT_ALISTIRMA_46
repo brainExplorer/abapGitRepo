@@ -1,0 +1,35 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_46
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 6: Yeni bir rapor olu#turun ve kullan#c#dan 1 adet geçmi# tarih al#n. Yeni bir Class olu#turun.
+*Class içerisinde 3 adet metot olsun. (#lki Statuc-Public, di#erleri Static-Protected). #kinci metot verilen
+*tarihteki günü bulsun. (Metot içerisinde GET_WEEKDAY_NAME veya DATE_COMPUTE_DAY
+*fonksiyonlar#ndan bir tanesini kullanabilirsiniz.) Üçüncü metot ise verilen tarih ile bugün aras#nda kaç
+*gün oldu#unu bulsun. Birinci metot, ikinci ve üçüncü metotlardan gelen veriyi kullanarak kullan#c#ya
+*anlam# bir text export etsin. (Örnek: 01.01.2024 tarihi girildi. Ekranda “Girilen 01.01.2024 Pazartesi ile
+*bugün aras#nda 5 gün bulunmaktad#r.”)
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_46.
+
+INCLUDE zmt_alistirma_46_top.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_46_TOP
+**&---------------------------------------------------------------------*
+*SELECTION-SCREEN BEGIN OF BLOCK b1.
+*  PARAMETERS: p_date TYPE datum.
+*SELECTION-SCREEN END OF BLOCK b1.
+*
+*data:go_date   TYPE REF TO zmt_class_date.
+INCLUDE zmt_alistirma_46_form.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_46_FORM
+**&---------------------------------------------------------------------*
+*
+*create OBJECT go_date.
+*
+*FORM display .
+*  go_date->get_date( iv_date =  p_date ).
+*ENDFORM.
+START-OF-SELECTION.
+
+PERFORM display.

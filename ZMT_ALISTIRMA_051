@@ -1,0 +1,322 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_051
+*&---------------------------------------------------------------------*
+*Al##t#rma – 4: SPFLI ve kendinize ait SPFLI ile ayni sat#r yap#s#na sahip olan database tablosu (Ör:
+*ZCM_SPFLI) yan yana iki ayr# ALV olacak #ekilde bir Container ALV haz#rlay#n. (Sa#daki ALV tamamen
+*bos olacak.) #ki ALV aras#nda 2 adet buton olsun. #lk buton solda seçili sat#rlar# soldaki ALV’den silsin ve
+*sa#daki ALV’ye kaydetsin. Ayn# zamanda database tablosuna da kaydetsin. #kinci buton sa#daki tabloda
+*seçili sat#rlar# database tablosundan ve ALV’den silsin ve soldaki ALV’ye kaydetsin.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_051.
+
+TABLES: zmt_spfli.
+
+DATA:  go_alv           TYPE REF TO cl_gui_alv_grid,
+       go_zmt_alv       TYPE REF TO cl_gui_alv_grid,
+       go_container     TYPE REF TO cl_gui_custom_container,
+       go_zmt_container TYPE REF TO cl_gui_custom_container,
+       gt_spfli         TYPE TABLE OF spfli,
+       gs_spfli         TYPE spfli,
+       gt_zmt_spfli     TYPE TABLE OF zmt_spfli,
+       gs_zmt_spfli     TYPE zmt_spfli,
+       gs_layo          TYPE lvc_s_layo,
+       gs_zmt_layo      TYPE lvc_s_layo,
+       gt_fcat          TYPE lvc_t_fcat,
+       gt_zmt_fcat      TYPE lvc_t_fcat,
+       gt_selected      TYPE lvc_t_roid,
+       gs_selected      TYPE lvc_s_roid.
+
+START-OF-SELECTION.
+
+CALL SCREEN 0103.
+
+MODULE status_0103 OUTPUT.
+  SET PF-STATUS 'STATUS103'.
+  SET TITLEBAR 'TITLE103'.
+
+
+  PERFORM first_container.
+  PERFORM second_container.
+
+ENDMODULE.
+
+MODULE user_command_0103 INPUT.
+    CASE sy-ucomm.
+      WHEN 'BACK'.
+        LEAVE PROGRAM.
+      WHEN 'TOSPFLI'.
+        PERFORM  itemtospfli.
+      WHEN 'TOAPP'.
+        PERFORM itemtoapp.
+    ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Original SPFLI
+*&---------------------------------------------------------------------*
+
+FORM first_container .
+  PERFORM get_data.
+  PERFORM set_layo.
+  PERFORM set_fcat.
+  PERFORM create_objects.
+ENDFORM.
+
+FORM get_data .
+  IF gt_spfli IS INITIAL.
+    SELECT * FROM spfli INTO TABLE gt_spfli.
+  ENDIF.
+ENDFORM.
+
+
+FORM set_layo .
+  gs_layo-zebra      = abap_true.
+  gs_layo-cwidth_opt = abap_true.
+  gs_layo-sel_mode   = 'A'.
+ENDFORM.
+
+FORM set_fcat .
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+   EXPORTING
+     i_structure_name             = 'SPFLI'
+     i_bypassing_buffer           = 'X'
+    CHANGING
+      ct_fieldcat                  = gt_fcat
+   EXCEPTIONS
+     inconsistent_interface       = 1
+     program_error                = 2
+     OTHERS                       = 3
+            .
+  IF sy-subrc <> 0.
+    MESSAGE | Occured an error while creating fcat. | TYPE 'S' DISPLAY LIKE 'E'.
+  ENDIF.
+
+ENDFORM.
+
+
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJECTS
+*&---------------------------------------------------------------------*
+
+FORM create_objects .
+    IF go_alv IS INITIAL.
+      CREATE OBJECT go_container
+        EXPORTING
+          container_name              =  'CC_ORIG'
+        EXCEPTIONS
+          cntl_error                  = 1
+          cntl_system_error           = 2
+          create_error                = 3
+          lifetime_error              = 4
+          lifetime_dynpro_dynpro_link = 5
+          OTHERS                      = 6.
+       IF sy-subrc <> 0.
+       MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                  WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+       ENDIF.
+
+      CREATE OBJECT go_alv
+        EXPORTING
+          i_parent          =  go_container
+        EXCEPTIONS
+          error_cntl_create = 1
+          error_cntl_init   = 2
+          error_cntl_link   = 3
+          error_dp_create   = 4
+          OTHERS            = 5.
+      IF sy-subrc <> 0.
+       MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                  WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      ENDIF.
+
+    go_alv->set_table_for_first_display(
+      EXPORTING
+        is_layout                     = gs_layo
+      CHANGING
+        it_outtab                     = gt_spfli
+        it_fieldcatalog               = gt_fcat
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4
+    ).
+    IF sy-subrc <> 0.
+     MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ENDIF.
+
+    ENDIF.
+    go_alv->refresh_table_display(
+      EXCEPTIONS
+        finished       = 1
+        OTHERS         = 2
+    ).
+    IF sy-subrc <> 0.
+     MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  ITEMTOAPP
+*&---------------------------------------------------------------------*
+FORM itemtoapp .
+    DATA: lt_spfli TYPE TABLE OF spfli,
+          ls_spfli TYPE spfli.
+
+    lt_spfli = gt_spfli.
+    IF gt_selected IS NOT INITIAL.
+      CLEAR: gt_selected.
+    ENDIF.
+      go_alv->get_selected_rows(
+      IMPORTING
+        et_row_no     = gt_selected    ).
+
+    LOOP AT gt_selected INTO gs_selected.
+        READ TABLE lt_spfli INTO ls_spfli INDEX gs_selected-row_id.
+        IF sy-subrc IS INITIAL.
+          append ls_spfli TO gt_zmt_spfli.
+          delete gt_spfli WHERE carrid = ls_spfli-carrid AND
+                                connid = ls_spfli-connid.
+        ENDIF.
+    ENDLOOP.
+
+ENDFORM.
+
+
+
+*&---------------------------------------------------------------------*
+*&      Imitation SPFLI
+*&---------------------------------------------------------------------*
+
+
+FORM second_container .
+  PERFORM get_idata.
+  PERFORM set_ilayo.
+  PERFORM set_ifcat.
+  PERFORM create_iobjects.
+ENDFORM.
+
+FORM get_idata .
+  IF gt_zmt_spfli IS INITIAL.
+    SELECT * FROM zmt_spfli INTO TABLE gt_zmt_spfli.
+  ENDIF.
+ENDFORM.
+
+
+FORM set_ilayo .
+  gs_zmt_layo-zebra      = abap_true.
+  gs_zmt_layo-cwidth_opt = abap_true.
+  gs_zmt_layo-sel_mode   = 'A'.
+ENDFORM.
+
+FORM set_ifcat .
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+   EXPORTING
+     i_structure_name             = 'ZMT_SPFLI'
+     i_bypassing_buffer           = 'X'
+    CHANGING
+      ct_fieldcat                  = gt_zmt_fcat
+   EXCEPTIONS
+     inconsistent_interface       = 1
+     program_error                = 2
+     OTHERS                       = 3
+            .
+  IF sy-subrc <> 0.
+    MESSAGE | Occured an error while creating fcat. | TYPE 'S' DISPLAY LIKE 'E'.
+  ENDIF.
+
+ENDFORM.
+
+
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJECTS
+*&---------------------------------------------------------------------*
+
+FORM create_iobjects .
+    IF go_zmt_alv IS INITIAL.
+      CREATE OBJECT go_zmt_container
+        EXPORTING
+          container_name              =  'CC_IMI'
+        EXCEPTIONS
+          cntl_error                  = 1
+          cntl_system_error           = 2
+          create_error                = 3
+          lifetime_error              = 4
+          lifetime_dynpro_dynpro_link = 5
+          OTHERS                      = 6.
+       IF sy-subrc <> 0.
+       MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                  WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+       ENDIF.
+
+      CREATE OBJECT go_zmt_alv
+        EXPORTING
+          i_parent          =  go_zmt_container
+        EXCEPTIONS
+          error_cntl_create = 1
+          error_cntl_init   = 2
+          error_cntl_link   = 3
+          error_dp_create   = 4
+          OTHERS            = 5.
+      IF sy-subrc <> 0.
+       MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                  WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      ENDIF.
+
+    go_zmt_alv->set_table_for_first_display(
+      EXPORTING
+        is_layout                     = gs_zmt_layo
+      CHANGING
+        it_outtab                     = gt_zmt_spfli
+        it_fieldcatalog               = gt_zmt_fcat
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4
+    ).
+    IF sy-subrc <> 0.
+     MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ENDIF.
+
+    ENDIF.
+
+
+    go_zmt_alv->refresh_table_display(
+      EXCEPTIONS
+        finished       = 1
+        OTHERS         = 2
+    ).
+    IF sy-subrc <> 0.
+     MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  ITEMTOSPFLI
+*&---------------------------------------------------------------------*
+FORM itemtospfli .
+
+    DATA: lt_spfli TYPE TABLE OF spfli,
+          ls_spfli TYPE spfli.
+
+    lt_spfli = gt_zmt_spfli.
+
+    IF gt_selected IS NOT INITIAL AND gs_selected IS NOT INITIAL.
+      CLEAR: gt_selected, gs_selected.
+    ENDIF.
+
+    go_zmt_alv->get_selected_rows(
+    IMPORTING
+        et_row_no = gt_selected    ).
+
+    LOOP AT gt_selected INTO gs_selected.
+        READ TABLE lt_spfli INTO ls_spfli INDEX gs_selected-row_id.
+        IF sy-subrc IS INITIAL.
+          append ls_spfli TO gt_spfli.
+          delete gt_zmt_spfli WHERE carrid = ls_spfli-carrid AND
+                                connid = ls_spfli-connid.
+        ENDIF.
+    ENDLOOP.
+ENDFORM.

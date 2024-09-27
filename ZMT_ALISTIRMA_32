@@ -1,0 +1,65 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_32
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_32.
+
+DATA: gv_scarr_id TYPE s_carr_id,
+      gs_scarr TYPE scarr,
+      gs_spfli TYPE spfli,
+      gs_sflight TYPE sflight,
+      gt_scarr TYPE TABLE OF scarr,
+      gt_spfli TYPE TABLE OF spfli,
+      gt_sflight TYPE TABLE OF sflight.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+  SELECT-OPTIONS: so_cid FOR gv_scarr_id.
+SELECTION-SCREEN END OF BLOCK b1.
+
+START-OF-SELECTION.
+
+SELECT * FROM scarr INTO TABLE gt_scarr WHERE carrid IN so_cid.
+SELECT * FROM spfli INTO TABLE gt_spfli WHERE carrid IN  so_cid.
+SELECT * FROM sflight INTO TABLE gt_sflight WHERE carrid IN so_cid.
+
+
+IF sy-subrc <> 0.
+  MESSAGE 'Sorgu hatas#' TYPE 'S' DISPLAY LIKE 'E'.
+  exit.
+ENDIF.
+
+PERFORM p_scarr.
+PERFORM p_spfli.
+PERFORM p_sflight.
+
+" Display scarr
+FORM p_scarr .
+  LOOP AT gt_scarr INTO gs_scarr.
+    WRITE: / gs_scarr-carrname,  gs_scarr-currcode.
+    CLEAR: gs_scarr.
+    SKIP.
+  ENDLOOP.
+  ULINE.
+  SKIP.
+ENDFORM.
+
+" Display spfli
+FORM p_spfli .
+  LOOP AT gt_spfli INTO gs_spfli.
+   WRITE: / gs_spfli-airpfrom, gs_spfli-cityto, gs_spfli-arrtime.
+   SKIP.
+   CLEAR: gs_spfli.
+  ENDLOOP.
+  ULINE.
+  SKIP.
+ENDFORM.
+
+" Display sflight
+FORM p_sflight .
+  LOOP AT gt_sflight INTO gs_sflight.
+    WRITE: / gs_sflight-currency, gs_sflight-planetype, gs_sflight-price, gs_sflight-seatsmax.
+    SKIP.
+    CLEAR: gs_sflight.
+  ENDLOOP.
+ENDFORM.

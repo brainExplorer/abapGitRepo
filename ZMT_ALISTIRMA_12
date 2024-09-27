@@ -1,0 +1,25 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_12
+*&---------------------------------------------------------------------*
+*&SE11 i#lem kodu ile bir SPFLI tablosunu ile ayni satir yap#s#na sahip yeni bir database
+*&tablosu tan#mlay#n. (SPFLI tablosundaki data elementler kullan#labilir) yeni bir program olu#turun.
+*&Program içerisinde öncelikle SPFLI tablosundan bütün sat#rlar# okuyun. Okunan sat#rlar#n tamam#na
+*&yeni olu#turdu#unuz tablonun içine kaydedin. (Insert)
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_12.
+
+DATA: gs_spfli TYPE spfli,
+      gt_spfli TYPE TABLE OF spfli.
+
+START-OF-SELECTION.
+
+SELECT * FROM spfli INTO TABLE gt_spfli.
+
+IF sy-subrc IS INITIAL.
+  LOOP AT gt_spfli INTO gs_spfli.
+    INSERT zmt_spfli_01 FROM gs_spfli.
+  ENDLOOP.
+  MESSAGE  'spfli table added to the zmt_spfli_01 table' TYPE 'S'.
+ELSE.
+  MESSAGE 'spfli table could not add to the zmt_spfli_01 table' TYPE 'S' DISPLAY LIKE 'E'.
+ENDIF.

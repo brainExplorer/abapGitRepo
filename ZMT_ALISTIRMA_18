@@ -1,0 +1,44 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_18
+*&---------------------------------------------------------------------*
+*&Yeni bir rapor olu#turun. Rapor içerisinde 1 adet parametre tan#mlay#n. Kullan#c#dan bir
+*&Country alin. Kendi olu#turdu#unuz ve SPFLI ile ayni satir yap#s#na sahip olan database tablosunda
+*&kullan#c#n#n girdi#i Country ile ayni Country bilgisine sahip olan sat#rlar# kal#c# olarak silin. (Delete)
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_18.
+
+DATA: gs_spfli TYPE zmt_spfli_01,
+      gt_spfli TYPE TABLE OF zmt_spfli_01,
+      gv_distance TYPE zmt_spfli_01-distance.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME.
+  PARAMETERS: p_cntry    TYPE zmt_spfli_01-countryfr.
+SELECTION-SCREEN END OF BLOCK b1.
+
+START-OF-SELECTION.
+
+SELECT * FROM zmt_spfli_01
+  INTO TABLE gt_spfli
+  WHERE countryfr = p_cntry.
+
+IF sy-subrc <> 0.
+  MESSAGE |No records found for the given country code. Please check your input again.| TYPE 'I'.
+  RETURN. "After the reporting event block START-OF-SELECTION is exited using RETURN,
+          "  the runtime environment does not trigger any more reporting events; instead,
+          "  it calls the list processor directly to display the basic list.(help.sap.com)
+ENDIF.
+
+LOOP AT gt_spfli INTO gs_spfli.
+  DELETE FROM zmt_spfli_01
+    WHERE carrid = gs_spfli-carrid
+    AND connid = gs_spfli-connid
+    AND countryfr = gs_spfli-countryfr.
+
+  IF sy-subrc <> 0.
+    MESSAGE |An error occurred while deleting the record: { gs_spfli-carrid } - { gs_spfli-connid }| TYPE 'E'.
+  ENDIF.
+ENDLOOP.
+
+IF sy-subrc IS INITIAL.
+  MESSAGE |Deleting is completed successfully.| TYPE 'S'.
+ENDIF.

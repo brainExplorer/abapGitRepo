@@ -1,0 +1,94 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_049
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 1: SE11 i#lem koduna giderek yeni bir structure tan#mlay#n. Hücre isimleri s#ras#yla
+*OGRENCI_NO, AD, SOYAD, ADRES, DERSLER. ADRES ve DERSLER hücreleri kendi ba##na birer structure
+*olsun. ADRES sat#r# ö#rencinin adres bilgilerini, DERSLER sat#r# ise ald### derslerin isimlerini
+*kaydedebilecek #ekilde olsun. Satiri örnek raporda kullanarak içerisine veri atin.
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 2: SE11 i#lem koduna giderek ilk al##t#rmadaki hücre isimlerinin aynisini kullanarak yeni bir
+*&structure tan#mlay#n. Ancak DERSLER hücresi ö#rencinin ald### dersleri isimlerini ve 3 s#nav#n
+*&sonuçlar#n# kaydedebilecek #ekilde olsun. Sat#r# örnek raporda kullanarak içerisine veri atin.
+*&---------------------------------------------------------------------*
+
+REPORT zmt_alistirma_049.
+
+DATA: gs_ogr TYPE zmt_st_ogr,
+      gt_ogr TYPE TABLE OF zmt_st_ogr.
+
+START-OF-SELECTION.
+
+*  first training
+gs_ogr-ad = 'Laura'.
+  gs_ogr-soyad = 'Correa'.
+  gs_ogr-ogrenci_no = 1000025421.
+  gs_ogr-adres-no = '10/C'.
+  gs_ogr-adres-street = 'Sun'.
+  gs_ogr-adres-city = 'London'.
+  gs_ogr-adres-country_name = 'England'.
+  gs_ogr-dersler-ders_adi = 12552.
+  gs_ogr-dersler-ders_name = 'Science'.
+
+
+  APPEND gs_ogr TO gt_ogr.
+
+  IF sy-subrc <> 0.
+    MESSAGE | Occured an error while students infos adding. | TYPE 'S' DISPLAY LIKE 'E'.
+  ELSE.
+    LOOP AT gt_ogr INTO gs_ogr.
+      WRITE: / 'Student Information: ',
+             /,
+             / 'Name        : ', gs_ogr-ad,
+             / 'Surname     : ', gs_ogr-soyad,
+             / 'Student No  : ', gs_ogr-ogrenci_no,
+             / 'Address No  : ', gs_ogr-adres-no,
+             / 'Street      : ', gs_ogr-adres-street,
+             / 'City        : ', gs_ogr-adres-city,
+             / 'Country     : ', gs_ogr-adres-country_name,
+             /,
+             / '-----------------------'.
+    ENDLOOP.
+    MESSAGE | Suucesfuly added student infos. | TYPE 'S'.
+  ENDIF.
+
+
+*  " second training
+*
+*  gs_ogr-ad = 'Laura'.
+*  gs_ogr-soyad = 'Correa'.
+*  gs_ogr-ogrenci_no = 1000025421.
+*  gs_ogr-adres-no = '10/C'.
+*  gs_ogr-adres-street = 'Sun'.
+*  gs_ogr-adres-city = 'London'.
+*  gs_ogr-adres-country_name = 'England'.
+*  gs_ogr-dersler-ders_adi = 'MATHEMATIC'.
+*  gs_ogr-dersler-exam_1 = 100.
+*  gs_ogr-dersler-exam_2 = 100.
+*  gs_ogr-dersler-exam_3 = 100.
+*
+*
+*  APPEND gs_ogr TO gt_ogr.
+*
+*  IF sy-subrc <> 0.
+*    MESSAGE | Occured an error while students infos adding. | TYPE 'S' DISPLAY LIKE 'E'.
+*  ELSE.
+*    LOOP AT gt_ogr INTO gs_ogr.
+*      WRITE: / 'Student Information: ',
+*             /,
+*             / 'Name          : ', gs_ogr-ad,
+*             / 'Surname       : ', gs_ogr-soyad,
+*             / 'Student No    : ', gs_ogr-ogrenci_no,
+*             / 'Address No    : ', gs_ogr-adres-no,
+*             / 'Street        : ', gs_ogr-adres-street,
+*             / 'City          : ', gs_ogr-adres-city,
+*             / 'Country       : ', gs_ogr-adres-country_name,
+*             / 'lecture Name  : ', gs_ogr-dersler-ders_adi,
+*             / 'Exam 1 result : ', gs_ogr-dersler-exam_1,
+*             / 'Exam 2 result : ', gs_ogr-dersler-exam_2,
+*             / 'Exam 3 result : ', gs_ogr-dersler-exam_3,
+*             /,
+*             / '-----------------------'.
+*    ENDLOOP.
+*    MESSAGE | Suucesfuly added student infos. | TYPE 'S'.
+*  ENDIF.

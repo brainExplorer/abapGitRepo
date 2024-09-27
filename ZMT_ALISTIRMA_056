@@ -1,0 +1,70 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_056
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 9: Dialog Screen programlama ile basit bir hesap makinesi olu#turun.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_056.
+
+INCLUDE zmt_alistirma_056_definitions.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_056_DEFINITIONS
+**&---------------------------------------------------------------------*
+*
+*DATA: go_alvgrid    TYPE REF TO cl_gui_alv_grid,  " ALV Grid object
+*      go_container  TYPE REF TO cl_gui_custom_container,  " ALV container object
+*      gv_result     TYPE p DECIMALS 3,
+*      gv_val1       TYPE i,
+*      gv_val2       TYPE i,
+*      gv_sign       TYPE c LENGTH 1.
+
+START-OF-SELECTION.
+
+CALL SCREEN 0100.
+
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0100  OUTPUT
+*&---------------------------------------------------------------------*
+MODULE status_0100 OUTPUT.
+  SET PF-STATUS 'STATUS0100'.
+  SET TITLEBAR 'TITLE0100'.
+ENDMODULE.
+
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+MODULE user_command_0100 INPUT.
+  CASE sy-ucomm.
+    WHEN 'BACK'.
+      LEAVE PROGRAM.
+    WHEN 'BTNRESULT'.
+      PERFORM result.
+  ENDCASE.
+ENDMODULE.
+
+*&---------------------------------------------------------------------*
+*&      Form  RESULT
+*&---------------------------------------------------------------------*
+FORM result .
+  IF gv_val1 IS NOT INITIAL AND gv_val2 IS NOT INITIAL AND gv_sign IS NOT INITIAL.
+    CASE gv_sign.
+      WHEN '+'.
+        gv_result = gv_val1 + gv_val2.
+      WHEN '-'.
+        gv_result = gv_val1 - gv_val2.
+      WHEN '*'.
+        gv_result = gv_val1 * gv_val2.
+      WHEN '/'.
+        IF gv_val2 = 0.
+          MESSAGE 'Division by zero is not allowed!' TYPE 'E'.
+          EXIT.
+        ELSE.
+          gv_result = gv_val1 / gv_val2.
+        ENDIF.
+      WHEN OTHERS.
+        MESSAGE 'You selected an invalid operator!' TYPE 'I' DISPLAY LIKE 'E'.
+        EXIT.
+    ENDCASE.
+  ELSE.
+    MESSAGE 'Please provide valid values and operator!' TYPE 'I'.
+  ENDIF.
+ENDFORM.

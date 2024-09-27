@@ -1,0 +1,250 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_054
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 7: SPFLI ve SFLIGHT tablolar#n#n Alev’leri yan yana olacak #ekilde bir Container ALV
+*&olu#turun. #ki ALV’nin ortas#nda 1 adet hücre (CARRID tipinde veri girilebilen input field) olsun.
+*&Hücrenin hemen alt#nda bir buton olsun. Kullan#c# herhangi bir CARRID girip alttaki butona basarsa her
+*&iki ALV’de de sadece bu CARRID’ye kar##l#k gelen sat#rlar kals#n. Di#er sat#rlar silinsin. Butonuna alt#na
+*&yeni bir buton olu#turun. Bu butona bas#ld###nda ALV’ler önceki hallerine geri dönsün.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_054.
+
+INCLUDE zmt_alistirma_054_data.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_054_DATA
+**&---------------------------------------------------------------------*
+*DATA: go_alv          TYPE REF TO cl_gui_alv_grid,
+*      go_container    TYPE REF TO cl_gui_custom_container,
+*      gt_fcat         TYPE lvc_t_fcat,
+*      gs_fcat         TYPE lvc_s_fcat,
+*      go_alv_f        TYPE REF TO cl_gui_alv_grid,
+*      go_container_f  TYPE REF TO cl_gui_custom_container,
+*      gt_fcat_f       TYPE lvc_t_fcat,
+*      gs_fcat_f       TYPE lvc_s_fcat,
+*      gs_layo         TYPE lvc_s_layo,
+*      gt_spfli        TYPE TABLE OF spfli,
+*      gs_spfli        TYPE spfli,
+*      gt_sflight      TYPE TABLE OF sflight,
+*      gs_sflight      TYPE sflight,
+*      gv_input        TYPE s_carr_id.
+
+START-OF-SELECTION.
+
+CALL  SCREEN 0100.
+
+MODULE status_0100 OUTPUT.
+  SET PF-STATUS 'STATUS100'.
+  SET TITLEBAR 'TITLE100'.
+
+  PERFORM get_data.
+  PERFORM set_fcat.
+  PERFORM set_layo.
+  PERFORM show_containers.
+
+ENDMODULE.
+
+MODULE user_command_0100 INPUT.
+
+  CASE sy-ucomm.
+    WHEN 'BACK'.
+      LEAVE PROGRAM.
+
+    WHEN 'BTNGET'.
+      PERFORM check_id.
+
+    WHEN 'BTNRESET'.
+      CLEAR: gt_sflight, gt_spfli, gv_input.
+
+  ENDCASE.
+
+ENDMODULE.
+
+FORM get_data .
+
+  IF gt_sflight IS INITIAL AND gt_spfli IS INITIAL.
+    SELECT * FROM sflight INTO TABLE gt_sflight.
+    SELECT * FROM spfli   INTO TABLE gt_spfli.
+  ELSEIF gv_input IS NOT INITIAL.
+    DELETE gt_sflight WHERE carrid NE gv_input.
+    DELETE gt_spfli WHERE carrid NE gv_input.
+  ENDIF.
+
+ENDFORM.
+
+FORM set_fcat .
+"  spfli  fcat
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+   EXPORTING
+     i_structure_name             = 'SPFLI'
+     i_bypassing_buffer           = 'X'
+    CHANGING
+      ct_fieldcat                  = gt_fcat
+   EXCEPTIONS
+     inconsistent_interface       = 1
+     program_error                = 2
+     OTHERS                       = 3
+            .
+  IF sy-subrc <> 0.
+    MESSAGE 'SPFLI Fcat Error!' TYPE 'I' DISPLAY LIKE 'E'.
+    LEAVE PROGRAM.
+  ENDIF.
+
+  "  sflight  fcat
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+   EXPORTING
+     i_structure_name             = 'SFLIGHT'
+     i_bypassing_buffer           = 'X'
+    CHANGING
+      ct_fieldcat                  = gt_fcat_f
+   EXCEPTIONS
+     inconsistent_interface       = 1
+     program_error                = 2
+     OTHERS                       = 3
+            .
+  IF sy-subrc <> 0.
+    MESSAGE 'SFLIGHT Fcat Error!' TYPE 'I' DISPLAY LIKE 'E'.
+    LEAVE PROGRAM.
+  ENDIF.
+
+ENDFORM.
+
+FORM set_layo .
+
+  gs_layo-zebra       = 'X'.
+  gs_layo-cwidth_opt  = 'X'.
+  gs_layo-sel_mode    = 'A'.
+
+ENDFORM.
+
+FORM show_containers .
+ " spfli container alv definitions
+  IF go_alv IS INITIAL.
+    CREATE OBJECT go_container
+    EXPORTING
+      container_name              = 'CC_SPFLI'
+    EXCEPTIONS
+      cntl_error                  = 1
+      cntl_system_error           = 2
+      create_error                = 3
+      lifetime_error              = 4
+      lifetime_dynpro_dynpro_link = 5
+      OTHERS                      = 6
+    .
+  IF sy-subrc <> 0.
+   MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+  CREATE OBJECT go_alv
+    EXPORTING
+      i_parent          = go_container
+    EXCEPTIONS
+      error_cntl_create = 1
+      error_cntl_init   = 2
+      error_cntl_link   = 3
+      error_dp_create   = 4
+      OTHERS            = 5
+    .
+  IF sy-subrc <> 0.
+   MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+  go_alv->set_table_for_first_display(
+    EXPORTING
+      is_layout                     = gs_layo
+    CHANGING
+      it_outtab                     = gt_spfli
+      it_fieldcatalog               = gt_fcat
+    EXCEPTIONS
+      invalid_parameter_combination = 1
+      program_error                 = 2
+      too_many_lines                = 3
+      OTHERS                        = 4
+  ).
+  IF sy-subrc <> 0.
+   MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+  ENDIF.
+
+  go_alv->refresh_table_display(
+    EXCEPTIONS
+      finished       = 1
+      OTHERS         = 2
+  ).
+
+  IF sy-subrc <> 0.
+   MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+  " sflight container alv definitions
+  IF go_alv_f IS INITIAL.
+    CREATE OBJECT go_container_f
+    EXPORTING
+      container_name              = 'CC_SFLIGHT'
+    EXCEPTIONS
+      cntl_error                  = 1
+      cntl_system_error           = 2
+      create_error                = 3
+      lifetime_error              = 4
+      lifetime_dynpro_dynpro_link = 5
+      OTHERS                      = 6
+    .
+  IF sy-subrc <> 0.
+   MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+  CREATE OBJECT go_alv_f
+    EXPORTING
+      i_parent          = go_container_f
+    EXCEPTIONS
+      error_cntl_create = 1
+      error_cntl_init   = 2
+      error_cntl_link   = 3
+      error_dp_create   = 4
+      OTHERS            = 5
+    .
+  IF sy-subrc <> 0.
+   MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+  go_alv_f->set_table_for_first_display(
+    EXPORTING
+      is_layout                     = gs_layo
+    CHANGING
+      it_outtab                     = gt_sflight
+      it_fieldcatalog               = gt_fcat_f
+    EXCEPTIONS
+      invalid_parameter_combination = 1
+      program_error                 = 2
+      too_many_lines                = 3
+      OTHERS                        = 4
+  ).
+  IF sy-subrc <> 0.
+   MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+  ENDIF.
+  go_alv_f->refresh_table_display(
+    EXCEPTIONS
+      finished       = 1
+      OTHERS         = 2
+  ).
+
+  IF sy-subrc <> 0.
+   MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+ENDFORM.
+
+FORM check_id .
+  IF gv_input IS INITIAL.
+    MESSAGE 'Please give a airline code!' TYPE 'I' DISPLAY LIKE 'E'.
+  ENDIF.
+ENDFORM.

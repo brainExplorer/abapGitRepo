@@ -1,0 +1,56 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_059
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 9: Dialog Screen programlama ile basit bir hesap makinesi olu#turun.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_059.
+
+INCLUDE zmt_alistirma_059_definitions.
+
+START-OF-SELECTION.
+
+call SCREEN 0100.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0100  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_0100 OUTPUT.
+  SET PF-STATUS 'STATUS1'.
+  SET TITLEBAR 'TITLE01'.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_0100 INPUT.
+  CASE sy-ucomm.
+    WHEN 'BACK'.
+      LEAVE PROGRAM.
+    WHEN 'BTN_SUM'.
+      PERFORM sum.
+    WHEN 'BTN_SUB'.
+      PERFORM sub.
+    WHEN 'BTN_MUL'.
+      PERFORM mul.
+    WHEN 'BTN_DIV'.
+      PERFORM div.
+  ENDCASE.
+ENDMODULE.
+
+FORM sum .
+  gv_res = gv_var1 + gv_var2.
+ENDFORM.
+
+FORM sub .
+  gv_res = gv_var1 - gv_var2.
+ENDFORM.
+
+FORM mul .
+  gv_res = gv_var1 * gv_var2.
+ENDFORM.
+
+FORM div .
+  gv_res = gv_var1 div gv_var2.
+ENDFORM.

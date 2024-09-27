@@ -1,0 +1,319 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_001
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_001.
+
+*&Al##t#rma – 10: Kendinize ait olan ve SCARR ile ayni satir yap#s#na sahip olan database tablosunun (Ör:
+*&ZCM_SCARR) bütün hücrelerinin gösterildi#i bir Dialog Screen haz#rlay#n. Tablo üzerinde CRUD
+*&i#lemlerinin yap#labilmesi için 4 adet yeni buton tan#mlay#n. Yap#lan de#i#iklikleri görebilmek ekran#n
+*&hemen sa# taraf#nda ayni tablonun ALV’sini gösterin.
+
+DATA: gv_carrid   TYPE c LENGTH 2,
+      gv_carrname TYPE s_carrname,
+      gv_currcode TYPE s_currcode,
+      gv_url      TYPE s_carrurl.
+
+TYPES: BEGIN OF gty_scarr.
+    INCLUDE STRUCTURE zmt_scarr.
+TYPES: row_color TYPE char4.
+TYPES: cell_color TYPE lvc_t_scol.
+TYPES END OF gty_scarr.
+
+DATA: gt_scarr  TYPE TABLE OF gty_scarr,
+      gs_scarr  TYPE gty_scarr,
+      gt_fcat   TYPE lvc_t_fcat,
+      gs_fcat   TYPE lvc_s_fcat,
+      gs_layout TYPE lvc_s_layo.
+
+DATA: go_alv_grid  TYPE REF TO cl_gui_alv_grid,
+      go_container TYPE REF TO cl_gui_custom_container.
+
+START-OF-SELECTION.
+
+  CALL SCREEN 0100.
+
+MODULE status_0100 OUTPUT.
+  SET PF-STATUS 'STATUS_0100'.
+  SET TITLEBAR 'TITLE_0100'.
+
+  PERFORM get_data.
+  PERFORM set_fcat.
+  PERFORM set_layout.
+  PERFORM show_data.
+ENDMODULE.
+
+MODULE user_command_0100 INPUT.
+  DATA: lt_sel_columns TYPE lvc_t_col,
+        ls_sel_columns TYPE lvc_s_col,
+        lv_color       TYPE lvc_emphsz,
+        lv_answer      TYPE char1.
+
+  DATA: lt_sel_rows TYPE lvc_t_roid,
+        ls_sel_rows TYPE lvc_s_roid.
+
+  DATA: lt_sel_cells TYPE lvc_t_cell,
+        ls_sel_cell  TYPE lvc_s_cell,
+        ls_sel_color TYPE lvc_s_scol.
+
+  CASE sy-ucomm.
+    WHEN 'BACK'.
+      LEAVE PROGRAM.
+    WHEN 'READ'.
+      DATA: ls_scarr TYPE zmt_scarr.
+      IF gv_carrid IS NOT INITIAL.
+        SELECT SINGLE * FROM zmt_scarr INTO ls_scarr WHERE carrid = gv_carrid.
+        IF ls_scarr IS NOT INITIAL.
+          gv_carrname = ls_scarr-carrname.
+          gv_currcode = ls_scarr-currcode.
+          gv_url      = ls_scarr-url.
+        ELSE.
+          MESSAGE 'Girdi#iniz CARRID ile e#le#en sat#r bulunamad#.' TYPE 'S' DISPLAY LIKE 'E'.
+        ENDIF.
+
+      ELSE.
+        CLEAR: gv_carrid, gv_carrname, gv_currcode, gv_url.
+        MESSAGE 'CARRID Bo# olmamal#.' TYPE 'S' DISPLAY LIKE 'E'.
+      ENDIF.
+
+*    WHEN 'UPDATE'.
+*      IF gv_carrid IS NOT INITIAL.
+*        UPDATE zmt_scarr SET carrname = gv_carrname
+*                             currcode = gv_currcode
+*                             url      = gv_url
+*                         WHERE carrid = gv_carrid.
+*        IF sy-subrc IS INITIAL.
+*          MESSAGE '##lem Ba#ar#l#.' TYPE 'S'.
+*        ELSE.
+*          MESSAGE '##lem Ba#ar#s#z.' TYPE 'S' DISPLAY LIKE 'E'.
+*        ENDIF.
+*      ELSE.
+*        MESSAGE 'CARRID Bo# olmamal#.' TYPE 'S' DISPLAY LIKE 'E'.
+*      ENDIF.
+*    WHEN 'DEL'.
+*      IF gv_carrid IS NOT INITIAL.
+*        DELETE FROM zmt_scarr WHERE carrid = gv_carrid.
+*
+*        IF sy-subrc IS INITIAL.
+*          MESSAGE '##lem Ba#ar#l#.' TYPE 'S'.
+*        ELSE.
+*          MESSAGE '##lem Ba#ar#s#z.' TYPE 'S' DISPLAY LIKE 'E'.
+*        ENDIF.
+*      ELSE.
+*        MESSAGE 'CARRID Bo# olmamal#.' TYPE 'S' DISPLAY LIKE 'E'.
+*      ENDIF.
+*    WHEN 'CREATE'.
+*      gs_scarr-carrid   = gv_carrid.
+*      gs_scarr-carrname = gv_carrname.
+*      gs_scarr-currcode = gv_currcode.
+*      gs_scarr-url      = gv_url.
+*
+*      INSERT zmt_scarr FROM gs_scarr.
+*
+*      IF sy-subrc IS INITIAL.
+*        MESSAGE '##lem Ba#ar#l#.' TYPE 'S'.
+*      ELSE.
+*        MESSAGE '##lem Ba#ar#s#z.' TYPE 'S' DISPLAY LIKE 'E'.
+*      ENDIF.
+    WHEN 'K_RENK'.
+      go_alv_grid->get_selected_columns(
+        IMPORTING
+          et_index_columns = lt_sel_columns ).
+
+      CALL FUNCTION 'ZMK_COLOR_SELECTION'
+        IMPORTING
+          ev_color  = lv_color
+          ev_answer = lv_answer.
+
+      IF lv_color IS NOT INITIAL AND lv_answer IS INITIAL.
+        IF lt_sel_columns IS NOT INITIAL.
+          LOOP AT lt_sel_columns INTO ls_sel_columns.
+            READ TABLE gt_fcat INTO gs_fcat WITH KEY fieldname = ls_sel_columns-fieldname.
+            IF sy-subrc IS INITIAL.
+              gs_fcat-emphasize = lv_color.
+              MODIFY gt_fcat FROM gs_fcat TRANSPORTING emphasize
+                WHERE fieldname = gs_fcat-fieldname.
+            ENDIF.
+          ENDLOOP.
+        ELSE.
+          MESSAGE 'En az bir kolon secilmelidir.' TYPE 'S' DISPLAY LIKE 'E'.
+        ENDIF.
+      ELSE.
+        MESSAGE 'Bir renk kodu girilmelidir.' TYPE 'S' DISPLAY LIKE 'E'.
+      ENDIF.
+    WHEN 'S_RENK'.
+      go_alv_grid->get_selected_rows(
+        IMPORTING
+          et_row_no     = lt_sel_rows ).
+
+      CALL FUNCTION 'ZMK_COLOR_SELECTION'
+        IMPORTING
+          ev_color  = lv_color
+          ev_answer = lv_answer.
+
+      IF lt_sel_rows IS NOT INITIAL.
+        LOOP AT lt_sel_rows INTO ls_sel_rows.
+          READ TABLE gt_scarr INTO gs_scarr INDEX ls_sel_rows-row_id.
+          IF sy-subrc IS INITIAL.
+            gs_scarr-row_color = lv_color.
+            MODIFY gt_scarr FROM gs_scarr
+               TRANSPORTING row_color
+               WHERE carrid = gs_scarr-carrid.
+          ENDIF.
+        ENDLOOP.
+      ELSE.
+        MESSAGE 'En az bir sat#r secilmelidir.' TYPE 'S' DISPLAY LIKE 'E'.
+      ENDIF.
+    WHEN 'H_RENK'.
+      DATA: lv_col_no TYPE char1,
+            lv_int    TYPE char1,
+            lv_inv    TYPE char1.
+      go_alv_grid->get_selected_cells(  " C511
+        IMPORTING
+          et_cell = lt_sel_cells ).
+
+*      CALL FUNCTION 'ZMK_COLOR_SELECTION'
+*        IMPORTING
+*          ev_color  = lv_color
+*          ev_answer = lv_answer.
+
+      CALL FUNCTION 'ZMK_COLOR_SELECTION_CELL'
+        IMPORTING
+          ev_color_number = lv_col_no
+          ev_intensified  = lv_int
+          ev_inverse      = lv_int
+          ev_answer       = lv_answer.
+
+      IF lt_sel_cells IS NOT INITIAL.
+        LOOP AT lt_sel_cells INTO ls_sel_cell.
+          ls_sel_color-fname = ls_sel_cell-col_id.
+          ls_sel_color-color-col = lv_col_no ." lv_color+1(1). " 5
+          ls_sel_color-color-int = lv_int    ." lv_color+2(1). " 1
+          ls_sel_color-color-inv = lv_inv    ." lv_color+3(1). " 1
+
+          READ TABLE gt_scarr INTO gs_scarr INDEX ls_sel_cell-row_id.
+          IF sy-subrc IS INITIAL.
+            APPEND ls_sel_color TO gs_scarr-cell_color.
+
+            MODIFY gt_scarr FROM gs_scarr
+              TRANSPORTING cell_color
+              WHERE carrid = gs_scarr-carrid.
+          ENDIF.
+
+        ENDLOOP.
+      ELSE.
+        MESSAGE 'En az bir hücre secilmelidir.' TYPE 'S' DISPLAY LIKE 'E'.
+      ENDIF.
+  ENDCASE.
+ENDMODULE.
+
+FORM get_data .
+  IF gt_scarr IS INITIAL.
+    SELECT * FROM zmt_scarr INTO CORRESPONDING FIELDS OF TABLE gt_scarr.
+  ENDIF.
+
+ENDFORM.
+
+FORM set_fcat .
+  IF gt_fcat IS INITIAL.
+    CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+      EXPORTING
+*       I_BUFFER_ACTIVE        =
+        i_structure_name       = 'ZMT_SCARR'
+*       I_CLIENT_NEVER_DISPLAY = 'X'
+        i_bypassing_buffer     = abap_true " 'X'
+*       I_INTERNAL_TABNAME     =
+      CHANGING
+        ct_fieldcat            = gt_fcat
+      EXCEPTIONS
+        inconsistent_interface = 1
+        program_error          = 2
+        OTHERS                 = 3.
+
+    IF sy-subrc <> 0.
+      LEAVE PROGRAM.
+    ENDIF.
+  ENDIF.
+
+
+
+ENDFORM.
+
+FORM set_layout .
+  gs_layout-zebra      = abap_true.
+  gs_layout-cwidth_opt = abap_true.
+  gs_layout-info_fname = 'ROW_COLOR'.
+  gs_layout-ctab_fname = 'CELL_COLOR'.
+  gs_layout-sel_mode   = 'A'.
+ENDFORM.
+
+FORM show_data .
+  IF go_alv_grid IS INITIAL.
+    CREATE OBJECT go_container
+      EXPORTING
+        container_name              = 'CC_ALV'
+      EXCEPTIONS
+        cntl_error                  = 1
+        cntl_system_error           = 2
+        create_error                = 3
+        lifetime_error              = 4
+        lifetime_dynpro_dynpro_link = 5
+        OTHERS                      = 6.
+    IF sy-subrc <> 0.
+      LEAVE PROGRAM.
+    ENDIF.
+
+    CREATE OBJECT go_alv_grid
+      EXPORTING
+        i_parent          = go_container
+      EXCEPTIONS
+        error_cntl_create = 1
+        error_cntl_init   = 2
+        error_cntl_link   = 3
+        error_dp_create   = 4
+        OTHERS            = 5.
+    IF sy-subrc <> 0.
+      LEAVE PROGRAM.
+    ENDIF.
+
+    go_alv_grid->set_table_for_first_display(
+      EXPORTING
+*        i_buffer_active               =
+*        i_bypassing_buffer            =
+*        i_consistency_check           =
+*        i_structure_name              =
+*        is_variant                    =
+*        i_save                        =
+*        i_default                     = 'X'
+        is_layout                     = gs_layout
+*        is_print                      =
+*        it_special_groups             =
+*        it_toolbar_excluding          =
+*        it_hyperlink                  =
+*        it_alv_graphics               =
+*        it_except_qinfo               =
+*        ir_salv_adapter               =
+      CHANGING
+        it_outtab                     = gt_scarr
+        it_fieldcatalog               = gt_fcat
+*        it_sort                       =
+*        it_filter                     =
+*      EXCEPTIONS
+*        invalid_parameter_combination = 1
+*        program_error                 = 2
+*        too_many_lines                = 3
+*        others                        = 4
+    ).
+    IF sy-subrc <> 0.
+      LEAVE PROGRAM.
+    ENDIF.
+  ELSE.
+    go_alv_grid->set_frontend_fieldcatalog( it_fieldcatalog = gt_fcat ).
+    go_alv_grid->set_frontend_layout( is_layout = gs_layout ).
+    go_alv_grid->refresh_table_display( ).
+    IF sy-subrc <> 0.
+      LEAVE PROGRAM.
+    ENDIF.
+  ENDIF.
+ENDFORM.

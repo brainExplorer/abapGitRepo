@@ -1,0 +1,32 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_17
+*&---------------------------------------------------------------------*
+*&Yeni bir rapor olu#turun. Rapor içerisinde 1 adet parametre tan#mlay#n. Kullan#c#dan bir
+*&Currency alin. Kendi olu#turdu#unuz ve SCARR ile ayni satir yap#s#na sahip olan database tablosunda
+*&kullan#c#n#n girdi#i Currency ile ayni Currency bilgisine sahip olan sat#rlar# kal#c# olarak silin. (Delete)
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_17.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME.
+  PARAMETERS: p_curr TYPE zmt_scarr_01-currcode.
+SELECTION-SCREEN END OF BLOCK b1.
+
+DATA: gt_scarr TYPE TABLE OF zmt_scarr_01,
+      gs_scarr TYPE zmt_scarr_01.
+
+START-OF-SELECTION.
+
+SELECT * FROM zmt_scarr_01 INTO TABLE gt_scarr WHERE currcode EQ p_curr.
+
+IF  sy-subrc <> 0.
+  MESSAGE | You entered invalid currency. | TYPE 'S' DISPLAY LIKE 'E'.
+  LEAVE LIST-PROCESSING. " after an error we will return the selection screen
+ENDIF.
+
+DELETE FROM zmt_scarr_01 WHERE currcode EQ p_curr.
+
+IF sy-subrc EQ 0.
+  MESSAGE | Deleting was applied successfully | TYPE 'S'.
+ELSE.
+  MESSAGE | Occurs an error. | TYPE 'S' DISPLAY LIKE 'E'.
+ENDIF.

@@ -1,0 +1,166 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_48
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_48.
+
+INCLUDE zmt_alistirma_top.     " It contains main program definitions
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_TOP
+**&---------------------------------------------------------------------*
+*SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE text-001 NO INTERVALS.
+*  PARAMETERS: p_cid     TYPE s_carr_id OBLIGATORY,
+*              p_scr     RADIOBUTTON GROUP x,
+*              p_spfl    RADIOBUTTON GROUP x,
+*              p_sflght  RADIOBUTTON GROUP x.
+*SELECTION-SCREEN END OF BLOCK b1.
+INCLUDE zmt_alistirma_cls_def. " Definitions of class's attributes, methods etc.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_CLS_DEF
+**&---------------------------------------------------------------------*
+*DATA: gs_scarr   TYPE scarr,
+*      gs_spfli   TYPE spfli,
+*      gs_sflight TYPE sflight.
+*
+*CLASS zmt_class_tables DEFINITION.
+*  PUBLIC SECTION.
+*  METHODS: get_requests IMPORTING iv_cid TYPE s_carrid " It keeps carrid type
+*                                  iv_sel TYPE string,   " Get the table name which user entered id.
+*           get_scarr EXCEPTIONS select_error,
+*           get_spfli,
+*           get_sflight.
+*  DATA: at_cid     TYPE s_carrid,
+*        at_scarr   TYPE zmt_tt_scarr,
+*        at_spfli   TYPE zmt_tt_spfli,
+*        at_sflight TYPE zmt_tt_sflight.
+*ENDCLASS.
+INCLUDE zmt_alistirma_cls_imp. " Implementation of class
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_CLS_IMP
+**&---------------------------------------------------------------------*
+*
+*CLASS zmt_class_tables IMPLEMENTATION.
+*     METHOD get_requests.
+*       at_cid = iv_cid.
+*      IF iv_sel EQ 'scarr'.
+*        get_scarr(
+*          EXCEPTIONS
+*            select_error = 1
+*            others       = 2
+*        ).
+*        IF sy-subrc <> 0.
+*         MESSAGE | Select error and return with { sy-subrc } code. | TYPE 'S' DISPLAY LIKE 'E'.
+*        ENDIF.
+*      ELSEIF iv_sel EQ 'spfli'.
+*        get_spfli( ).
+*      ELSEIF iv_sel EQ 'sflight'.
+*        get_sflight( ).
+*      ENDIF.
+*     ENDMETHOD.
+*
+*     "Scarr table
+*     METHOD get_scarr.
+*       SELECT * FROM scarr INTO  TABLE at_scarr WHERE carrid EQ at_cid.
+*     ENDMETHOD.
+*
+*     " Spfli table
+*     METHOD get_spfli.
+*       SELECT * FROM spfli INTO  TABLE at_spfli WHERE carrid EQ at_cid.
+*     ENDMETHOD.
+*
+*     " Sflight table
+*     METHOD get_sflight.
+*       SELECT * FROM sflight INTO  TABLE at_sflight WHERE carrid EQ at_cid.
+*     ENDMETHOD.
+*ENDCLASS.
+*
+*" We have to create class object after implemented the local class and if we use public type.
+*DATA: go_cls_tbl TYPE REF TO zmt_class_tables.
+INCLUDE zmt_alistirma_cls_app. " Applying class
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_CLS_APP
+**&---------------------------------------------------------------------*
+*FORM show .
+*  IF p_scr eq 'X'.
+*    go_cls_tbl->get_requests(
+*      EXPORTING
+*        iv_cid   = p_cid
+*        iv_sel   = 'scarr'
+*    ).
+*    PERFORM scarr.
+*
+*  ELSEIF p_spfl eq 'X'.
+*    go_cls_tbl->get_requests(
+*      EXPORTING
+*        iv_cid   = p_cid
+*        iv_sel   = 'spfli'
+*    ).
+*    PERFORM spfli.
+*
+*  ELSEIF p_sflght eq 'X'.
+*    go_cls_tbl->get_requests(
+*      EXPORTING
+*        iv_cid   = p_cid
+*        iv_sel   = 'sflight'
+*    ).
+*    PERFORM sflight.
+*
+*  ENDIF.
+*ENDFORM.
+*
+*" Display scarr
+*FORM scarr .
+*  IF sy-subrc EQ 0.
+**        gt_scarr = go_cls_tbl->at_scarr.
+*      LOOP AT go_cls_tbl->at_scarr INTO gs_scarr.
+*         WRITE: / gs_scarr-carrid, gs_scarr-carrname, gs_scarr-currcode, gs_scarr-url.
+*         SKIP.
+*      ENDLOOP.
+*      ULINE.
+*     ELSE.
+*       MESSAGE | Occured an error while reading the tables | TYPE 'S' DISPLAY LIKE 'E'.
+*     ENDIF.
+*ENDFORM.
+*
+*" Display spfli
+*FORM spfli .
+*   IF sy-subrc EQ 0.
+*      LOOP AT go_cls_tbl->at_spfli INTO gs_spfli.
+*         WRITE: / gs_spfli-airpfrom, gs_spfli-airpto, gs_spfli-arrtime, gs_spfli-carrid, gs_spfli-cityfrom,
+*                  gs_spfli-cityto, gs_spfli-connid, gs_spfli-countryfr, gs_spfli-countryfr, gs_spfli-countryto,
+*                  gs_spfli-deptime, gs_spfli-distance, gs_spfli-distid, gs_spfli-fltime, gs_spfli-fltype, gs_spfli-period.
+*         SKIP.
+*      ENDLOOP.
+*      ULINE.
+*    ELSE.
+*       MESSAGE | Occured an error while reading the tables | TYPE 'S' DISPLAY LIKE 'E'.
+*    ENDIF.
+*ENDFORM.
+*
+*" Display sflight
+*FORM sflight .
+*       IF sy-subrc eq 0.
+*       LOOP AT go_cls_tbl->at_sflight INTO gs_sflight.
+*         WRITE: / gs_sflight-carrid,gs_sflight-connid, gs_sflight-currency, gs_sflight-fldate, gs_sflight-fldate,
+*                  gs_sflight-paymentsum, gs_sflight-planetype, gs_sflight-price, gs_sflight-seatsmax, gs_sflight-seatsmax_b,
+*                  gs_sflight-seatsmax_f, gs_sflight-seatsocc, gs_sflight-seatsocc_b, gs_sflight-seatsocc_f.
+*         SKIP.
+*     ENDLOOP.
+*     ULINE.
+*     ELSE.
+*       MESSAGE | An error occured while selecting the table | TYPE 'S' DISPLAY LIKE 'E'.
+*     ENDIF.
+*ENDFORM.
+INCLUDE zmt_alistirma_crt_obj. " Create class objects.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_CRT_OBJ
+**&---------------------------------------------------------------------*
+*
+*FORM create_object .
+*  CREATE OBJECT go_cls_tbl.
+*ENDFORM.
+START-OF-SELECTION.
+
+PERFORM create_object.
+PERFORM show.

@@ -1,0 +1,57 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_44
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 4: Yeni bir rapor olu#turun ve kullan#c#dan select-options yard#m#yla 1 adet CARRID alin.
+*Ayr#ca 3 adet checkbox olsun. Checkboxlar#n isimleri s#ras#yla “Scarr”, “Spfli” ve “Sflight” olsun. Yeni
+*bir Class olu#turun. Class içerisinde 4 adet metot olsun. Birinci metot (Instance-Public), kullan#c#n#n
+*verdi#i CARRID bilgisini ve seçilen checkbox bilgisini import etsin. Hangi checkboxlar seçildiyse o
+*tablodan veri çeksin ve kullan#c#ya export etsin. Her tablodan veri çekmek için ayr# (Instance-Protected)
+*metotlar olu#turun ve ilk metot içerisinde kullan#n.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_44.
+
+INCLUDE zmt_alistirma_44_top.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_44_TOP
+**&---------------------------------------------------------------------*
+*SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+*  PARAMETERS: p_cid TYPE  s_carr_id OBLIGATORY,
+*              p_scarr     RADIOBUTTON GROUP x,
+*              p_spfli     RADIOBUTTON GROUP x,
+*              p_sflght   RADIOBUTTON GROUP x.
+*SELECTION-SCREEN END OF BLOCK b1.
+*
+*DATA: gt_result TYPE i,
+*      go_class  TYPE REF TO zmt_class_db.
+INCLUDE zmt_alistirma_44_form.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_44_FORM
+**&---------------------------------------------------------------------*
+*CREATE OBJECT go_class.
+*
+*" Display selected table
+*FORM display .
+*  IF p_scarr IS NOT INITIAL.
+*    go_class->get_requests(
+*      EXPORTING
+*        iv_val1    =  p_cid
+*        iv_choice  =  '0'
+*    ).
+*  ELSEIF p_spfli IS NOT INITIAL.
+*     go_class->get_requests(
+*      EXPORTING
+*        iv_val1    =  p_cid
+*        iv_choice  =  '1'
+*    ).
+*
+*  ELSEIF p_sflght IS NOT INITIAL.
+*     go_class->get_requests(
+*      EXPORTING
+*        iv_val1    =  p_cid
+*        iv_choice  =  '2'
+*    ).
+*  ENDIF.
+*ENDFORM.
+START-OF-SELECTION.
+
+PERFORM display.

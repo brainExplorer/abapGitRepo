@@ -1,0 +1,53 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_22
+*&---------------------------------------------------------------------*
+*&  Al##t#rma – 3: Yeni bir rapor olu#turun ve kullan#c#dan 2 adet parametre alin. Her ikisi de CARRID tipinde
+*&  olsun. Parametrelerden gelen veriyi Type Range komutu kullanarak olu#turaca##n#z Select-Options
+*&  yap#lar#na aktar#n ve SPFLI tablosunda sat#rlar# okuyup ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_22.
+
+TYPES: BEGIN OF gty_carrid,
+        sign    TYPE c LENGTH 1,
+        option  TYPE c LENGTH 2,
+        low     TYPE s_carr_id,
+        high    TYPE s_carr_id,
+      END OF gty_carrid.
+
+DATA: gt_sel_carrid TYPE RANGE OF s_carr_id,
+      gs_sel_carrid TYPE gty_carrid,
+      gt_spfli      TYPE TABLE OF spfli,
+      gs_spfli      TYPE spfli.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+  PARAMETERS: p_carr1 TYPE s_carr_id,
+              p_carr2 TYPE s_carr_id.
+SELECTION-SCREEN END OF BLOCK b1.
+
+START-OF-SELECTION.
+
+" Get the first parameter which selected by user.
+gs_sel_carrid-sign = 'I'.
+gs_sel_carrid-option = 'EQ'.
+gs_sel_carrid-low = p_carr1.
+
+APPEND gs_sel_carrid TO gt_sel_carrid.
+CLEAR: gs_sel_carrid.
+
+" Get the second parameter which selected by user.
+gs_sel_carrid-sign = 'I'.
+gs_sel_carrid-option = 'EQ'.
+gs_sel_carrid-low = p_carr2.
+
+APPEND gs_sel_carrid TO gt_sel_carrid.
+CLEAR: gs_sel_carrid.
+
+" Select items where corresponding carrids from spfli with user selections.
+SELECT * FROM spfli INTO TABLE gt_spfli WHERE carrid IN gt_sel_carrid.
+
+LOOP AT gt_spfli INTO gs_spfli.
+  WRITE: / gs_spfli-airpfrom, gs_spfli-airpto,  gs_spfli-arrtime,  gs_spfli-carrid,    gs_spfli-cityfrom,
+           gs_spfli-cityto,   gs_spfli-connid,  gs_spfli-countryfr,gs_spfli-countryto, gs_spfli-deptime,
+           gs_spfli-distance, gs_spfli-distance,gs_spfli-distid,  gs_spfli-fltime,    gs_spfli-fltype.
+  ULINE.
+ENDLOOP.

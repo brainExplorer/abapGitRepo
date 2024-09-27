@@ -1,0 +1,8 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZMT_ALISTIRMA_35_TOP
+*&---------------------------------------------------------------------*
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+    PARAMETERS: p_val TYPE int1 OBLIGATORY.
+SELECTION-SCREEN END OF BLOCK b1.
+
+DATA: gv_day TYPE string.

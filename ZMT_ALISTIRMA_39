@@ -1,0 +1,65 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_39
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 19: Yeni bir fonksiyon yaz#n. Kullan#c#dan 1 adet i#lem sembolü adet de say# als#n. Gelen
+*sembole göre uygun matematiksel i#lemi yap#p sonucunu kullan#c#ya versin. ##lem sembolü bos olursa
+*bir exception bildirsin. Geçersiz bir i#lem sembolü girilirse ayr# bir exception bildirsin. Fonksiyon
+*içerisindeki tüm i#lemleri ayr# performlar halinde yap#n. Fonksiyonu yeni yazaca##n#z bir raporda
+*kullan#n. Sonucu ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_39.
+
+include ZMT_ALISTIRMA_39_top.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_39_TOP
+**&---------------------------------------------------------------------*
+*SELECTION-SCREEN begin of BLOCK b1.
+*  PARAMETERS: p_sym TYPE c LENGTH 1,
+*              p_numb1   TYPE int4,
+*              p_numb2   TYPE int4.
+*SELECTION-SCREEN END OF BLOCK b1.
+*
+*DATA: gv_result TYPE int4.
+include ZMT_ALISTIRMA_39_form.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_39_FORM
+**&---------------------------------------------------------------------*
+**&---------------------------------------------------------------------*
+**&      Form  DISPLAY
+**&---------------------------------------------------------------------*
+**       text
+**----------------------------------------------------------------------*
+**  -->  p1        text
+**  <--  p2        text
+**----------------------------------------------------------------------*
+*FORM display .
+*CALL FUNCTION 'ZMT_FM_BASICMATH'
+*  EXPORTING
+*    iv_sym          = p_sym
+*    iv_numb         = p_numb1
+*    iv_numb2        = p_numb2
+* IMPORTING
+*   EV_RESULT       = gv_result
+* EXCEPTIONS
+*   U_SYMBOL        = 1
+*   ZERO_DIV        = 2
+*   OTHERS          = 3
+*          .
+* IF sy-subrc = 1 or sy-subrc = 2.
+*    " Display the predefined message from the function module
+*    MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*            WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+*    EXIT. " Exit the form if an exception occurs
+*  ELSEIF sy-subrc = 3.
+*    " Handle any other unexpected exceptions
+*    WRITE: / 'An unexpected error occurred.'.
+*    EXIT. " Exit the form if an exception occurs
+* ENDIF.
+*
+*MESSAGE | { p_numb1 } { p_sym } { p_numb2 } = { gv_result } | TYPE 'I'.
+*
+*ENDFORM.
+
+START-OF-SELECTION.
+
+PERFORM display.

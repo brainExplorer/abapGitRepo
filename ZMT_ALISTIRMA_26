@@ -1,0 +1,70 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_26
+*&---------------------------------------------------------------------*
+*&  Al##t#rma – 7: Bir önceki al##t#rmadaki parametreyi tekrar tan#mlay#n ve gelen veriyi kullanarak SCARR
+*& tablosunu okuyun. For All Entries komutu yard#m#yla SPFLI tablosundan, SCARR’dan okunan tüm
+*& sat#rlar#n CARRID’si ile ayni CARRID’ye sahip olan sat#rlar# okuyun. Daha sonra yine For All Entries
+*& komutu yard#m#yla SFLIGHT tablosundan, SPFLI’den okunan tüm sat#rlar#n CONNID’si ile ayni
+*& CONNID’ye sahip olan sat#rlar# okuyun ve ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_26.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+PARAMETERS: p_cname TYPE scarr-carrname LOWER CASE.
+SELECTION-SCREEN END OF BLOCK b1.
+
+DATA: gt_scarr   TYPE TABLE OF scarr,
+      gt_spfli   TYPE TABLE OF spfli,
+      gt_sflight TYPE TABLE OF sflight,
+      gs_scarr   TYPE scarr,
+      gs_spfli   TYPE spfli,
+      gs_sflight TYPE sflight.
+
+START-OF-SELECTION.
+
+  IF p_cname IS NOT INITIAL.
+    " Read scarr table using with user value.
+    SELECT * FROM scarr
+      INTO TABLE gt_scarr
+      WHERE carrname EQ p_cname.
+  ENDIF.
+
+
+  IF sy-subrc IS INITIAL.
+
+    " scarr writing
+    LOOP AT gt_scarr INTO gs_scarr.
+      WRITE: / gs_scarr-carrid, gs_scarr-carrname, gs_scarr-currcode, gs_scarr-url.
+      SKIP.
+      " spfli displaying
+      IF gt_scarr IS NOT INITIAL.
+        SELECT * FROM spfli
+          FOR ALL ENTRIES IN @gt_scarr
+          WHERE carrid EQ @gt_scarr-carrid
+          INTO TABLE @gt_spfli.
+
+      ENDIF.
+      LOOP AT gt_spfli INTO gs_spfli.
+        WRITE: / gs_spfli-airpfrom, gs_spfli-airpto, gs_spfli-arrtime, gs_spfli-carrid,
+                 gs_spfli-cityfrom, gs_spfli-cityto, gs_spfli-connid,  gs_spfli-countryfr,
+                 gs_spfli-countryto,gs_spfli-deptime,gs_spfli-distance,gs_spfli-distance,
+                 gs_spfli-distid,   gs_spfli-fltime, gs_spfli-fltype,  gs_spfli-period.
+        SKIP.
+        " sflight displaying
+        IF gt_spfli IS NOT INITIAL.
+          SELECT * FROM sflight
+            FOR ALL ENTRIES IN  @gt_spfli
+            WHERE carrid EQ @gt_spfli-carrid AND connid EQ @gt_spfli-connid
+            INTO TABLE @gt_sflight.
+        ENDIF.
+        LOOP AT gt_sflight INTO gs_sflight.
+          WRITE: / gs_sflight-carrid,     gs_sflight-connid,    gs_sflight-currency, gs_sflight-fldate,
+                   gs_sflight-paymentsum, gs_sflight-planetype, gs_sflight-price,    gs_sflight-seatsmax,
+                   gs_sflight-seatsmax_b, gs_sflight-seatsmax_f,gs_sflight-seatsocc, gs_sflight-seatsocc_b,
+                   gs_sflight-seatsocc_f.
+          SKIP.
+        ENDLOOP.
+      ENDLOOP.
+    ENDLOOP.
+
+  ENDIF.

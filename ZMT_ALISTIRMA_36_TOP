@@ -1,0 +1,10 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZMT_ALISTIRMA_36_TOP
+*&---------------------------------------------------------------------*
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+  PARAMETERS: p_carrid TYPE s_carrid.
+SELECTION-SCREEN END OF BLOCK b1.
+
+data: gt_scarr TYPE TABLE OF scarr,
+      gs_scarr TYPE scarr.

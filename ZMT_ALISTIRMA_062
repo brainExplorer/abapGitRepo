@@ -1,0 +1,79 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_062
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 2: Kendinize ait STRAVELAG database tablosunun (Ör: ZCM_STRAVELAG) bütün kay#tlar#n#
+*silin ve MANDT kolonundan hemen sonra gelecek #ekilde yeni bir ID kolonu olu#turun. (Yeni bir Key
+*Field) SNRO i#lem kodunu kullanarak bir say# aral### objesi olu#turun. (4 haneli say#lar üretecek.) Yeni
+*bir rapor olu#turun ve STRAVELAG tablosunun tüm sat#rlar#n# okuyun. Her satirin yeni ID hücresi için
+*NUMBER_GET_NEXT fonksiyonu ve olu#turdu#unuz say# aral### objesini kullanarak bir ID üretin ve ID
+*hücresi içerisine kaydedin. Elde etti#iniz sat#r# kendinize ait database tablosuna kaydedin.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_062.
+TABLES: zmt_stravelag.
+DATA: gt_stravelag TYPE TABLE OF zmt_stravelag,
+      gs_stravel   TYPE zmt_stravelag,
+      gv_id        TYPE n LENGTH 4.
+
+START-OF-SELECTION.
+
+  SELECT * FROM zmt_stravelag INTO TABLE gt_stravelag.
+  IF lines( gt_stravelag ) NE 0 .
+    DATA: gv_mandt TYPE c LENGTH 3.
+    gv_mandt = sy-mandt.
+
+    DELETE FROM zmt_stravelag USING CLIENT @gv_mandt.
+
+
+    IF sy-subrc = 0.
+      WRITE: / 'All records deleted from ZMT_STRAVELAG.'.
+      CLEAR: gt_stravelag.
+    ELSE.
+      MESSAGE 'Failed to delete records!' TYPE 'E'.
+      EXIT.
+    ENDIF.
+  ENDIF.
+
+  SELECT * FROM stravelag INTO CORRESPONDING FIELDS OF TABLE gt_stravelag.
+  IF sy-subrc <> 0.
+    MESSAGE 'No records found in STRAVELAG!' TYPE 'I'.
+    EXIT.
+  ENDIF.
+
+  LOOP AT gt_stravelag INTO gs_stravel.
+
+    " Generate ID using NUMBER_GET_NEXT
+    CALL FUNCTION 'NUMBER_GET_NEXT'
+      EXPORTING
+        nr_range_nr             = '01'
+        object                  = 'ZMT_RNG_02'
+      IMPORTING
+        number                  = gv_id
+      EXCEPTIONS
+        interval_not_found      = 1
+        number_range_not_intern = 2
+        object_not_found        = 3
+        quantity_is_0           = 4
+        quantity_is_not_1       = 5
+        interval_overflow       = 6
+        buffer_overflow         = 7
+        OTHERS                  = 8.
+
+    IF sy-subrc <> 0.
+      MESSAGE 'Failed to get new ID!' TYPE 'E'.
+      EXIT.
+    ENDIF.
+
+    " Assign generated ID to the new field
+    gs_stravel-id = gv_id.
+
+    " Insert the modified record back into ZMT_STRAVELAG
+    INSERT zmt_stravelag FROM gs_stravel.
+    IF sy-subrc <> 0.
+      MESSAGE 'Error inserting record into ZMT_STRAVELAG!' TYPE 'E'.
+      EXIT.
+    ENDIF.
+
+  ENDLOOP.
+
+  MESSAGE |All records successfully updated and inserted into ZMT_STRAVELAG.| TYPE 'I'.
+  LEAVE PROGRAM.

@@ -1,0 +1,162 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_055
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 8: SFLIGHT tablosu için Container ALV haz#rlay#n. 2 adet buton tan#mlay#n. #lk butona
+*bas#ld###nda “PRICE” kolonu, ikinci butona bas#ld###nda “SEATSMAX” kolonu için trafik ###klar#
+*olu#turun.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_055.
+
+INCLUDE zmt_alistirma_055_definitions.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_055_DEFINITIONS
+**&---------------------------------------------------------------------*
+*TYPES : BEGIN OF gty_list.
+*    INCLUDE STRUCTURE sflight.
+*TYPES : traffic_light TYPE icon-id.
+*TYPES : END OF gty_list.
+*
+*DATA:
+*  go_alvgrid        TYPE REF TO cl_gui_alv_grid,  " ALV Grid object
+*  go_container      TYPE REF TO cl_gui_custom_container,  " ALV container object
+*  gt_list           TYPE TABLE OF gty_list,  " Data for the ALV (SFLIGHT + traffic lights)
+*  ls_list           TYPE gty_list,  " Work area for SFLIGHT data + traffic lights
+*  gt_fieldcat       TYPE lvc_t_fcat,  " Field catalog for ALV
+*  gs_fieldcat       TYPE lvc_s_fcat,  " Work area for field catalog
+*  gs_layout         TYPE lvc_s_layo,  " Layout settings for ALV
+*  lt_selected_cells TYPE lvc_t_cell,  " Selected cells (optional, only if you plan to handle cell selection)
+*  ls_selected_cells TYPE lvc_s_cell,  " Work area for selected cells
+*  lv_decimal        TYPE p DECIMALS 1,  " Variable for calculating percentages (e.g., price, occupancy)
+*  lv_color          TYPE lvc_emphsz.  " Color for traffic lights
+
+START-OF-SELECTION.
+  CALL SCREEN 0100.
+
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0100  OUTPUT
+*&---------------------------------------------------------------------*
+MODULE status_0100 OUTPUT.
+  SET PF-STATUS 'PF_STATUS_100'.
+  SET TITLEBAR 'TITLE_100'.
+
+  PERFORM select_data.
+  PERFORM fcat.
+  PERFORM layout.
+  PERFORM show_alv.
+ENDMODULE.
+
+*&---------------------------------------------------------------------*
+*&      Form  SELECT_DATA
+*&---------------------------------------------------------------------*
+FORM select_data .
+  IF gt_list IS INITIAL.
+    SELECT * FROM sflight INTO CORRESPONDING FIELDS OF TABLE gt_list.
+  ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  FCAT
+*&---------------------------------------------------------------------*
+FORM fcat .
+  IF gt_fieldcat IS INITIAL.
+    CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+      EXPORTING
+        i_structure_name       = 'SFLIGHT'
+        i_bypassing_buffer     = abap_true
+      CHANGING
+        ct_fieldcat            = gt_fieldcat
+      EXCEPTIONS
+        inconsistent_interface = 1
+        program_error          = 2
+        OTHERS                 = 3.
+
+    IF sy-subrc IS NOT INITIAL.
+      BREAK-POINT.
+    ENDIF.
+
+    gs_fieldcat-fieldname = 'TRAFFIC_LIGHT'.
+    gs_fieldcat-col_pos   = 9.
+    gs_fieldcat-scrtext_m = 'Stuation'.
+    gs_fieldcat-icon      = abap_true.
+
+    APPEND gs_fieldcat TO gt_fieldcat.
+    CLEAR: gs_fieldcat.
+  ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  LAYOUT
+*&---------------------------------------------------------------------*
+FORM layout .
+  gs_layout-zebra      = abap_true.
+  gs_layout-cwidth_opt = abap_true.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  SHOW_ALV
+*&---------------------------------------------------------------------*
+FORM show_alv .
+  IF go_alvgrid IS INITIAL.
+    CREATE OBJECT go_container
+      EXPORTING
+        container_name = 'CC_ALV'.
+    CREATE OBJECT go_alvgrid
+      EXPORTING
+        i_parent = go_container.
+    go_alvgrid->set_table_for_first_display(
+      EXPORTING
+        is_layout       = gs_layout
+      CHANGING
+        it_outtab       = gt_list
+        it_fieldcatalog = gt_fieldcat ).
+  ELSE.
+    go_alvgrid->refresh_table_display( ).
+  ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  OPEN_TRAFFIC_LIGHTS
+*&---------------------------------------------------------------------*
+FORM open_traffic_lights USING p_column TYPE c.
+
+  LOOP AT gt_list INTO ls_list.
+
+    IF p_column = 'PRICE'.
+      lv_decimal = ls_list-price / 2400.  " Example scaling for price
+    ELSEIF p_column = 'SEATSMAX'.
+      lv_decimal = ls_list-seatsocc / ls_list-seatsmax. " Occupancy ratio for SEATSMAX
+    ENDIF.
+
+    IF lv_decimal >= ( 80 / 100 ).
+      ls_list-traffic_light = '@0A@'. " Green traffic light
+    ELSEIF lv_decimal < ( 80 / 100 ) AND lv_decimal >= ( 40 / 100 ).
+      ls_list-traffic_light = '@09@'. " Yellow traffic light
+    ELSE.
+      ls_list-traffic_light = '@08@'. " Red traffic light
+    ENDIF.
+
+    MODIFY gt_list FROM ls_list TRANSPORTING traffic_light WHERE carrid = ls_list-carrid
+                                                               AND connid = ls_list-connid
+                                                               AND fldate = ls_list-fldate.
+  ENDLOOP.
+*
+*  " Refresh ALV display after applying the traffic lights
+*  IF go_alvgrid IS NOT INITIAL.
+*    go_alvgrid->refresh_table_display( ).
+*  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+MODULE user_command_0100 INPUT.
+
+CASE sy-ucomm.
+  WHEN 'BACK'.
+    LEAVE PROGRAM.
+  WHEN 'BTNPRICE'. " Button for PRICE traffic light
+      PERFORM open_traffic_lights USING 'PRICE'.
+  WHEN 'BTNSEATSMAX'. " Button for SEATSMAX traffic light
+      PERFORM open_traffic_lights USING 'SEATSMAX'.
+ENDCASE.
+ENDMODULE.

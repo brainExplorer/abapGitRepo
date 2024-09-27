@@ -1,0 +1,32 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_25
+*&---------------------------------------------------------------------*
+*& Al##t#rma – 6: Yeni bir Search Help olu#turun. Bu Search Help SCARR tablosundaki bütün CARRNAME
+*&verisine sahip olsun. Search Help’i istedi#iniz bir data element içerisinde kullan#n. Daha sonra örnek
+*&bir rapor yaz#p 1 adet parametre tan#mlay#n. Parametreyi tan#mlarken bu data elementi kullan#n. Gelen
+*&veriyi kullanarak SCARR tablosunu okuyup ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_25.
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+  PARAMETERS: p_cname TYPE zmt_de_alistirma_01 LOWER CASE.
+SELECTION-SCREEN END OF BLOCK b1.
+
+DATA: gs_scarr TYPE scarr,
+      gt_scarr TYPE TABLE OF scarr.
+
+START-OF-SELECTION.
+
+SELECT * FROM scarr INTO TABLE gt_scarr
+  WHERE carrname eq p_cname.
+
+IF sy-subrc <> 0.
+  MESSAGE | An error occurred when selecting from the table. sy-subrc: { sy-subrc } | TYPE 'E'.
+  EXIT.
+ENDIF.
+
+LOOP AT gt_scarr INTO gs_scarr.
+  WRITE: / gs_scarr-carrid, gs_scarr-carrname, gs_scarr-currcode, gs_scarr-url.
+  SKIP.
+ENDLOOP.
+
+ULINE.

@@ -1,0 +1,58 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_38
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 18: Yeni bir fonksiyon yaz#n. Bir adet CARRID als#n. Gelen CARRID bossa kullan#c#ya SCARR
+*tablosunun tüm sat#rlar#n# versin. Doluysa tek bir satir versin. Doluysa ve buna ra#men SCARR
+*içerisinde uygun bir satir bulunamad#ysa “SATIR_BULUNMAMADI” seklinde bir exception versin.
+*Fonksiyonu yeni yazaca##n#z bir raporda kullan#n. Sonuç ne olursa olsun ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_38.
+
+include ZMT_ALISTIRMA_38_top.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_38_TOP
+**&---------------------------------------------------------------------*
+*SELECTION-SCREEN begin of BLOCK b1 WITH FRAME TITLE text-001.
+*  PARAMETERS: p_cid TYPE s_carrid.
+*SELECTION-SCREEN END OF BLOCK b1.
+*
+*DATA: gt_scarr TYPE TABLE OF scarr,
+*      gs_scarr TYPE scarr.
+include ZMT_ALISTIRMA_38_form.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_38_FORM
+**&---------------------------------------------------------------------*
+*
+*FORM display .
+*  DATA: gv_msg TYPE char40.
+*
+*  CALL FUNCTION 'ZMT_FM_GETSCARRITEM'
+*    EXPORTING
+*      iv_id          = p_cid
+*    IMPORTING
+*      ET_SCARR       = gt_scarr
+*    EXCEPTIONS
+*      EE_MSG         = 1
+*      OTHERS         = 2.
+*
+*  IF sy-subrc = 1.
+*    " Display the predefined message from the function module
+*    MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*            WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+*    EXIT.
+*  ELSEIF sy-subrc = 2.
+*    " Handle any other unexpected exceptions
+*    WRITE: / 'An unexpected error occurred.'.
+*    EXIT.
+*  ENDIF.
+*
+*  LOOP AT gt_scarr INTO gs_scarr.
+*    WRITE: / gs_scarr-carrid, gs_scarr-carrname, gs_scarr-currcode, gs_scarr-url.
+*    SKIP.
+*  ENDLOOP.
+*  ULINE.
+*
+*ENDFORM.
+START-OF-SELECTION.
+
+PERFORM display.

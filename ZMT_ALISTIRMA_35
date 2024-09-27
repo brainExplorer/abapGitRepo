@@ -1,0 +1,25 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_35
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 15: Yeni bir fonksiyon yaz#n. Kullan#c#dan 1 ile 7 aras#nda bir say# als#n. Kullan#c#ya girdi#i
+*say#ya kar##l#k gelen günü bildirsin. Fonksiyonu yeni yazaca##n#z bir raporda kullan#n. Kullan#c#n#n elde
+*etti#i günü ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_35.
+
+INCLUDE ZMT_ALISTIRMA_35_TOP.
+
+START-OF-SELECTION.
+
+IF not p_val BETWEEN 1 and 7.
+  MESSAGE 'Enter a number between 1 and 7.' TYPE 'S' DISPLAY LIKE 'W'.
+  EXIT.
+ENDIF.
+
+CALL FUNCTION 'ZMT_FM_GETDAYBYNUMBER'
+  EXPORTING
+    iv_val        = p_val
+ IMPORTING
+   EV_DAY        = gv_day.
+
+WRITE: gv_day.

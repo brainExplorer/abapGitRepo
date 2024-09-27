@@ -1,0 +1,25 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZMT_ALISTIRMA_36_FORM
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display .
+
+CALL FUNCTION 'ZMT_FM_GETSCARR'
+  EXPORTING
+    iv_id          = p_carrid
+ IMPORTING
+   ET_SCARR       = gt_scarr.
+
+SKIP.
+LOOP AT gt_scarr INTO gs_scarr.
+  WRITE: gs_scarr-carrid, gs_scarr-carrname, gs_scarr-currcode, gs_scarr-url.
+ENDLOOP.
+
+ENDFORM.

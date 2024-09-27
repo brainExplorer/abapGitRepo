@@ -1,0 +1,186 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_052
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 5: SFLIGHT tablosu için Container ALV haz#rlay#n. Kullan#c#n#n kolon ismi girebilece#i 1 hücre
+*&(input field) olu#turun. 3 adet buton (3 ayri renk isminde) olu#turun. Kullan#c# herhangi bir kolon ismi
+*&girip butonlardan birine bast###nda o kolon renklendirilsin.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_052.
+
+INCLUDE zmt_alistirma_052_top.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_052_TOP
+**&---------------------------------------------------------------------*
+*DATA: go_alv TYPE REF TO cl_gui_alv_grid,
+*      go_container TYPE REF TO cl_gui_custom_container,
+*      gs_layout    TYPE lvc_s_layo,
+*      gt_fcat      TYPE lvc_t_fcat,
+*      gs_fcat      TYPE lvc_s_fcat,
+*      gt_sflight   TYPE TABLE OF sflight,
+*      gs_sflight   TYPE sflight,
+*      go_alv_grid   TYPE REF TO cl_gui_alv_grid,
+*      gv_column_name TYPE lvc_fname.
+
+START-OF-SELECTION.
+
+  CALL SCREEN 0104.
+
+MODULE status_0104 OUTPUT.
+  SET PF-STATUS 'STATUSCLR'.
+  SET TITLEBAR 'TITLECLR'.
+
+  PERFORM get_data.
+  PERFORM set_fcat.
+  PERFORM set_layo.
+  PERFORM show_alv.
+
+ENDMODULE.
+
+MODULE user_command_0104 INPUT.
+  CASE sy-ucomm.
+    WHEN '&BACK&'.
+      LEAVE PROGRAM.
+    WHEN 'BTN_RD'.
+      IF gv_column_name IS NOT INITIAL.
+        PERFORM color_column USING gv_column_name 'RED'.
+      ELSE.
+        MESSAGE 'Please enter a column name!' TYPE 'I'.
+      ENDIF.
+    WHEN 'BTN_GRN'.
+      IF gv_column_name IS NOT INITIAL.
+        PERFORM color_column USING gv_column_name 'GREEN'.
+      ELSE.
+        MESSAGE 'Please enter a column name!' TYPE 'I'.
+      ENDIF.
+    WHEN 'BTN_BL'.
+      IF gv_column_name IS NOT INITIAL.
+        PERFORM color_column USING gv_column_name 'BLUE'.
+      ELSE.
+        MESSAGE 'Please enter a column name!' TYPE 'I'.
+      ENDIF.
+  ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+FORM get_data .
+  IF gt_sflight IS INITIAL.
+    SELECT * FROM sflight INTO TABLE gt_sflight.
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_FCAT
+*&---------------------------------------------------------------------*
+
+FORM set_fcat .
+  IF gt_fcat IS INITIAL.
+    CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+      EXPORTING
+        i_structure_name       = 'SFLIGHT'
+        i_bypassing_buffer     = abap_true
+      CHANGING
+        ct_fieldcat            = gt_fcat
+      EXCEPTIONS
+        inconsistent_interface = 1
+        program_error          = 2
+        OTHERS                 = 3.
+    IF sy-subrc <> 0.
+      MESSAGE ' Occuured an error while creating a fcat. ' TYPE 'S' DISPLAY LIKE 'E'.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYO
+*&---------------------------------------------------------------------*
+FORM set_layo .
+  gs_layout-zebra = 'X'.
+  gs_layout-cwidth_opt = 'X'.
+  gs_layout-sel_mode = 'A'.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SHOW_ALV
+*&---------------------------------------------------------------------*
+FORM show_alv .
+  IF go_alv IS INITIAL.
+    CREATE OBJECT go_container
+      EXPORTING
+        container_name              = 'CC_CLR'
+      EXCEPTIONS
+        cntl_error                  = 1
+        cntl_system_error           = 2
+        create_error                = 3
+        lifetime_error              = 4
+        lifetime_dynpro_dynpro_link = 5
+        OTHERS                      = 6.
+    IF sy-subrc <> 0.
+      MESSAGE 'Occured an error while creating container object.' TYPE 'S' DISPLAY LIKE 'E'.
+    ENDIF.
+
+
+    CREATE OBJECT go_alv
+      EXPORTING
+        i_parent          = go_container
+      EXCEPTIONS
+        error_cntl_create = 1
+        error_cntl_init   = 2
+        error_cntl_link   = 3
+        error_dp_create   = 4
+        OTHERS            = 5.
+    IF sy-subrc <> 0.
+      MESSAGE 'Occured an error while creating alv' TYPE 'S' DISPLAY LIKE 'E'.
+    ENDIF.
+
+    go_alv->set_table_for_first_display(
+      EXPORTING
+        is_layout                     = gs_layout
+      CHANGING
+        it_outtab                     = gt_sflight
+        it_fieldcatalog               = gt_fcat
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4
+    ).
+    IF sy-subrc <> 0.
+      MESSAGE 'Occured an error while first displaying.' TYPE 'S' DISPLAY LIKE 'E'.
+    ENDIF.
+  ENDIF.
+
+  go_alv->set_frontend_fieldcatalog( it_fieldcatalog =  gt_fcat ).
+
+  go_alv->set_frontend_layout( is_layout =  gs_layout ).
+
+  " Refresh the container
+  go_alv->refresh_table_display(
+    EXCEPTIONS
+      finished       = 1
+      OTHERS         = 2
+  ).
+  IF sy-subrc <> 0.
+    MESSAGE 'Occured an error while refreshing' TYPE 'S' DISPLAY LIKE 'E'.
+  ENDIF.
+
+
+ENDFORM.
+
+FORM color_column USING pv_column_name TYPE lvc_fname
+                         pv_color      TYPE string.
+
+  READ TABLE gt_fcat INTO gs_fcat WITH KEY fieldname = pv_column_name.
+  IF sy-subrc IS INITIAL.
+    IF gs_fcat-fieldname = pv_column_name.
+      CASE pv_color.
+        WHEN 'RED'.
+          gs_fcat-emphasize = 'C610'.  " Red color code
+        WHEN 'GREEN'.
+          gs_fcat-emphasize = 'C510'.  " Green color code
+        WHEN 'BLUE'.
+          gs_fcat-emphasize = 'C410'.  " Blue color code
+      ENDCASE.
+      MODIFY gt_fcat FROM gs_fcat TRANSPORTING emphasize WHERE fieldname = gs_fcat-fieldname.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.

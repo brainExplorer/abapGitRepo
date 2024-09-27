@@ -1,0 +1,236 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_053
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 6: SFLIGHT tablosu için Container ALV haz#rlay#n. Kullan#c#n#n bir say# girebilece#i 1 hücre
+*(input field) olu#turun. 2 adet radiobuton olu#turun. Radiobutonlar “BÜYÜKTÜR” ve “KÜCÜKTÜR”
+*seklinde isimlendirilsin. 1 adet buton olu#turun ve ismi “RENKLEND#R” olsun. Kullan#c# herhangi say#
+*girip radiobutonlardan birini seçtikten sonra kullan#c#dan bir renk alin. Tabloda sat### yap#lan koltuk
+*say#lar# gelen ko#ula göre renklendirilsin. (Örnek: Kullan#c# 100 say#s#n# girdi ve “BÜYÜKTÜR” isimli
+*radiobutonu seçtikten “RENKLENDIR” butonuna bast# ve “KIRMIZI” yazarak ok butonuna t#klad#. Bu
+*durumda “SEATSOCC” kolonundaki 100’den büyük olan hücreler k#rm#z# ile renklendirilecek.)
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_053.
+
+INCLUDE zmt_alistirma_053_definitions.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_053_DEFINITIONS
+**&---------------------------------------------------------------------*
+*DATA: gv_val         TYPE int4,
+*      gv_val_str     TYPE char50,
+*      go_alv         TYPE REF TO cl_gui_alv_grid,
+*      go_container   TYPE REF TO cl_gui_custom_container,
+*      gs_layout      TYPE lvc_s_layo,
+*      gt_fcat        TYPE lvc_t_fcat,
+*      gs_fcat        TYPE lvc_s_fcat,
+*      gt_sflight     TYPE TABLE OF sflight,
+*      gs_sflight     TYPE sflight,
+*      gv_column_name TYPE lvc_fname,
+*      gv_condition   TYPE string,
+*      rbsmaller      TYPE c,
+*      rbgreater      TYPE c.
+
+START-OF-SELECTION.
+
+CALL SCREEN 0103.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0103  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_0103 OUTPUT.
+  SET PF-STATUS 'STATUS103'.
+  SET TITLEBAR 'TITLE103'.
+
+  PERFORM get_data USING gv_condition.
+  PERFORM set_fcat.
+  PERFORM set_layo.
+  PERFORM show_container.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0103  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_0103 INPUT.
+
+  PERFORM check_value.
+
+  CASE sy-ucomm.
+    WHEN 'BACK'.
+      LEAVE PROGRAM.
+    WHEN 'BTNCOLOR'.
+     DATA: lv_color       TYPE lvc_emphsz,
+           lv_answer      TYPE char1.
+
+      CALL FUNCTION 'ZMK_COLOR_SELECTION'
+       IMPORTING
+         EV_COLOR        = lv_color
+         ev_answer       = lv_answer .
+
+      CASE lv_color.
+        WHEN 'C610'.
+          lv_color = 'RED'.
+        WHEN 'C510'.
+          lv_color = 'GREE'.
+        WHEN 'C410'.
+          lv_color = 'BLUE'.
+      ENDCASE.
+
+      PERFORM color_column USING 'SEATSOCC' lv_color.
+
+    WHEN 'RBORDER'.
+      IF rbsmaller = 'X'.
+         PERFORM smaller.
+      ELSEIF rbgreater EQ 'X'.
+        PERFORM greater.
+      ENDIF.
+
+  ENDCASE.
+
+ENDMODULE.
+
+FORM smaller .
+
+    WRITE gv_val to gv_val_str.
+    CONCATENATE 'seatsocc' ' le ' gv_val_str INTO gv_condition.
+    PERFORM get_data USING gv_condition.
+
+ENDFORM.
+
+FORM greater .
+
+    WRITE gv_val TO gv_val_str.
+    CONCATENATE 'seatsocc' ' ge ' gv_val_str INTO gv_condition SEPARATED BY space.
+    PERFORM get_data USING gv_condition.
+
+ENDFORM.
+
+FORM get_data  USING    p_gv_condition.
+  IF gv_condition IS INITIAL AND  gt_sflight IS INITIAL.
+    SELECT * FROM sflight INTO TABLE gt_sflight WHERE (p_gv_condition).
+  ELSEIF gv_condition IS NOT INITIAL.
+    SELECT * FROM sflight INTO TABLE gt_sflight WHERE (p_gv_condition).
+    IF sy-subrc IS NOT INITIAL.
+      MESSAGE | Occured an error cause : { gv_condition } | TYPE 'I' DISPLAY LIKE 'E'.
+      LEAVE PROGRAM.
+    ENDIF.
+  ENDIF.
+ENDFORM.
+
+FORM check_value .
+    IF gv_val IS INITIAL.
+      MESSAGE 'You have to give a number!' TYPE 'I' DISPLAY LIKE 'E'.
+      EXIT.
+    ENDIF.
+ENDFORM.
+
+FORM set_fcat .
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+   EXPORTING
+     I_STRUCTURE_NAME             = 'SFLIGHT'
+     I_BYPASSING_BUFFER           = abap_true
+
+    CHANGING
+      ct_fieldcat                  = gt_fcat
+   EXCEPTIONS
+     INCONSISTENT_INTERFACE       = 1
+     PROGRAM_ERROR                = 2
+     OTHERS                       = 3
+            .
+  IF sy-subrc <> 0.
+    MESSAGE 'Occured an error while cresting fcat.' TYPE 'I' DISPLAY LIKE 'E'.
+  ENDIF.
+
+ENDFORM.
+
+FORM set_layo .
+  gs_layout-zebra      = 'X'.
+  gs_layout-cwidth_opt = 'X'.
+  gs_layout-sel_mode   = 'A'.
+ENDFORM.
+
+FORM show_container .
+  IF go_alv IS INITIAL.
+       CREATE OBJECT go_container
+       EXPORTING
+         container_name              = 'CC_CLR'
+       EXCEPTIONS
+         cntl_error                  = 1
+         cntl_system_error           = 2
+         create_error                = 3
+         lifetime_error              = 4
+         lifetime_dynpro_dynpro_link = 5
+         others                      = 6
+       .
+     IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                 WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+     ENDIF.
+
+     CREATE OBJECT go_alv
+       EXPORTING
+         i_parent          =  go_container
+       EXCEPTIONS
+         error_cntl_create = 1
+         error_cntl_init   = 2
+         error_cntl_link   = 3
+         error_dp_create   = 4
+         others            = 5
+       .
+     IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                 WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+     ENDIF.
+
+     go_alv->set_table_for_first_display(
+       EXPORTING
+          is_layout                     = gs_layout
+       CHANGING
+         it_outtab                     =  gt_sflight
+         it_fieldcatalog               =  gt_fcat
+       EXCEPTIONS
+         invalid_parameter_combination = 1
+         program_error                 = 2
+         too_many_lines                = 3
+         others                        = 4
+     ).
+     IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                 WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+     ENDIF.
+  ENDIF.
+
+  go_alv->set_frontend_fieldcatalog( it_fieldcatalog = gt_fcat ).
+  go_alv->set_frontend_layout( is_layout =  gs_layout ).
+
+  go_alv->refresh_table_display(
+    EXCEPTIONS
+      finished       = 1
+      others         = 2
+  ).
+  IF sy-subrc <> 0.
+   MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+ENDFORM.
+
+FORM color_column USING pv_column_name TYPE lvc_fname
+                         pv_color      TYPE lvc_emphsz.
+
+  READ TABLE gt_fcat INTO gs_fcat WITH KEY fieldname = pv_column_name.
+  IF sy-subrc IS INITIAL.
+    IF gs_fcat-fieldname = pv_column_name.
+      CASE pv_color.
+        WHEN 'RED'.
+          gs_fcat-emphasize = 'C610'.  " Red color code
+        WHEN 'BLUE'.
+          gs_fcat-emphasize = 'C410'.  " Blue color code
+        WHEN 'GREE'.
+          gs_fcat-emphasize = 'C510'.  " Green color code
+      ENDCASE.
+      MODIFY gt_fcat FROM gs_fcat TRANSPORTING emphasize WHERE fieldname = gs_fcat-fieldname.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.

@@ -1,0 +1,51 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_41
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 1: Yeni bir rapor olu#turun ve kullan#c#dan 2 adet say# alin. Yeni bir Class olu#turun. Class
+*içerisinde 1 adet metot olsun. (Instance-Public) Metodun say# tipinde 2 adet import parametresi olsun,
+*yine say# tipinde 1 adet export parametresi olsun. Metot kendisine verilen birinci say#y# (kendisine
+*verilen ikinci say# kadar) kendisiyle çarps#n. (Örnek: metoda s#ras#yla 10 ve 3 say#lar# verildiyse, metot
+*10 say#s#n# kendisiyle 3 kere çarpacak ve elde etti#i sonucu export parametresine kaydedecek.) elde
+*etti#iniz sonucu ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_41.
+
+INCLUDE zmt_alistirma_41_top.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_41_TOP
+**&---------------------------------------------------------------------*
+*SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME.
+*  PARAMETERS : p_val1 TYPE i,
+*               p_val2 TYPE i.
+*SELECTION-SCREEN END OF BLOCK b1.
+*
+*data: gv_result TYPE i,
+*      go_pow    TYPE REF TO zmt_class_pow.
+INCLUDE zmt_alistirma_41_form.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_41_FORM
+**&---------------------------------------------------------------------*
+*
+*CREATE OBJECT go_pow.
+*
+*go_pow->pow(
+*  EXPORTING
+*    iv_val1   = p_val1
+*    iv_val2   = p_val2
+*  IMPORTING
+*    ev_result = gv_result
+*).
+**&---------------------------------------------------------------------*
+**&      Form  DISPLAY
+**&---------------------------------------------------------------------*
+**       text
+**----------------------------------------------------------------------*
+**  -->  p1        text
+**  <--  p2        text
+**----------------------------------------------------------------------*
+*FORM display .
+*  MESSAGE | { p_val1 } ** { p_val2 } equal to { gv_result } . | TYPE 'I'.
+*ENDFORM.
+START-OF-SELECTION.
+
+PERFORM display.

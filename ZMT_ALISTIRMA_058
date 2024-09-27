@@ -1,0 +1,73 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_058
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 1: Yeni bir rapor olu#turun ve kullan#c#dan tek bir hücre içerisinde ad#n# ve soy ad#n# al#n.
+*Ayr#ca 2 adet parametre olu#turun. Parametreler “Yukar#dan A#a##ya” ve “Sa#dan Sola” olsun. Rapor
+*içerisinde kullan#c#n#n ad#n# ve soy ad#n# alt alta veya sa#dan sola olacak #ekilde yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_058.
+
+*SELECTION-SCREEN BEGIN OF BLOCK a1 WITH FRAME TITLE TEXT-001 NO INTERVALS.
+*  PARAMETERS: p_adsoy  TYPE string,
+*              p_solsag RADIOBUTTON GROUP abc,
+*              p_yukas  RADIOBUTTON GROUP abc.
+*SELECTION-SCREEN END OF BLOCK a1.
+*DATA: gv_karsay TYPE i,
+*      gv_sayi   TYPE i,
+*      gv_name   TYPE c LENGTH 1.
+*START-OF-SELECTION.
+*  gv_karsay = strlen( p_adsoy ) - 1.
+*  IF p_solsag IS NOT INITIAL.
+*    " Soldan sa#a yazd#rma
+*    DO gv_karsay + 1 TIMES.
+*      WRITE: p_adsoy+gv_karsay(1).
+*      gv_karsay = gv_karsay - 1.
+*    ENDDO.
+*  ELSEIF p_yukas IS NOT INITIAL.
+*    " Yukar#dan a#a##ya yazd#rma
+*    DO gv_karsay + 1 TIMES.
+*      gv_name = p_adsoy+gv_sayi(1).
+*      gv_sayi = gv_sayi + 1.
+*      IF gv_name CO ' '.
+*        SKIP.
+*      ELSEIF gv_name NA ' '.
+*        WRITE: / gv_name.
+*      ENDIF.
+*    ENDDO.
+*  ENDIF.
+
+SELECTION-SCREEN BEGIN OF BLOCK a1 WITH FRAME TITLE TEXT-001 NO INTERVALS.
+  PARAMETERS: p_adsoy  TYPE string,
+              p_solsag RADIOBUTTON GROUP abc,
+              p_yukas  RADIOBUTTON GROUP abc.
+SELECTION-SCREEN END OF BLOCK a1.
+
+DATA: gv_karsay TYPE i,
+      gv_sayi   TYPE i,
+      gv_name   TYPE c LENGTH 1.
+
+START-OF-SELECTION.
+
+  " Bo#luklar# kald#r
+  CONDENSE p_adsoy NO-GAPS.
+
+  gv_karsay = strlen( p_adsoy ) - 1.
+
+  IF p_solsag IS NOT INITIAL.
+    " Soldan sa#a yazd#rma
+    DO gv_karsay + 1 TIMES.
+      WRITE: p_adsoy+gv_karsay(1).
+      gv_karsay = gv_karsay - 1.
+    ENDDO.
+  ELSEIF p_yukas IS NOT INITIAL.
+    " Yukar#dan a#a##ya yazd#rma
+    DO gv_karsay + 1 TIMES.
+      gv_name = p_adsoy+gv_sayi(1).
+      gv_sayi = gv_sayi + 1.
+      IF gv_name CO ' '.
+        SKIP.
+      ELSEIF gv_name NA ' '.
+        WRITE: / gv_name.
+      ENDIF.
+    ENDDO.
+  ENDIF.

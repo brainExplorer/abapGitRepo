@@ -1,0 +1,25 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_11
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 11: SE11 i#lem kodu ile bir SCARR tablosunu ile ayni satir yap#s#na sahip yeni bir database
+*&tablosu tan#mlay#n. (SCARR tablosundaki data elementler kullan#labilir) yeni bir program olu#turun.
+*&Program içerisinde öncelikle SCARR tablosundan bütün sat#rlar# okuyun. Okunan sat#rlar#n tamam#na
+*&yeni olu#turdu#unuz tablonun içine kaydedin. (Insert)
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_11.
+
+DATA: gs_scarr TYPE scarr,
+      gt_scarr TYPE TABLE OF scarr.
+
+START-OF-SELECTION.
+
+SELECT * FROM scarr INTO TABLE gt_scarr.
+
+IF sy-subrc IS INITIAL.
+  LOOP AT gt_scarr INTO gs_scarr.
+    INSERT zmt_scarr_01 from gs_scarr.
+  ENDLOOP.
+  MESSAGE 'Task Completed' TYPE 'S'.
+ELSE.
+  MESSAGE 'Failed Task' TYPE 'S' DISPLAY LIKE 'E'.
+ENDIF.

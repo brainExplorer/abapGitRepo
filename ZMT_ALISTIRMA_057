@@ -1,0 +1,163 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_057
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 10: Kendinize ait olan ve SCARR ile ayni satir yap#s#na sahip olan database tablosunun (Ör:
+*&ZCM_SCARR) bütün hücrelerinin gösterildi#i bir Dialog Screen haz#rlay#n. Tablo üzerinde CRUD
+*&i#lemlerinin yap#labilmesi için 4 adet yeni buton tan#mlay#n. Yap#lan de#i#iklikleri görebilmek ekran#n
+*&hemen sa# taraf#nda ayni tablonun ALV’sini gösterin.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_057.
+
+INCLUDE zmt_alistirma_057_definitions.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_057_DEFINITIONS
+**&---------------------------------------------------------------------*
+*DATA: go_alv       TYPE REF TO cl_gui_alv_grid,
+*      go_container TYPE REF TO cl_gui_custom_container,
+*      gt_fieldcat  TYPE lvc_t_fcat,
+*      gs_fieldcat  TYPE lvc_s_fcat,
+*      gs_layo      TYPE lvc_s_layo,
+*      gt_scarr     TYPE TABLE OF zmt_scarr,
+*      gs_scarr     TYPE zmt_scarr,
+*      gv_cid       TYPE c LENGTH 2,
+*      gv_carrname   TYPE s_carrname,
+*      gv_currcode  TYPE  s_currcode,
+*      gv_url       TYPE  s_carrurl.
+
+START-OF-SELECTION.
+
+CALL SCREEN 0100.
+
+
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0100  OUTPUT
+*&---------------------------------------------------------------------*
+MODULE status_0100 OUTPUT.
+
+  SET PF-STATUS 'STATUS1'.
+  SET TITLEBAR 'TITLE1'.
+  PERFORM get_data.
+  PERFORM set_fcat.
+  PERFORM set_layo.
+  PERFORM show_scarr.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+MODULE user_command_0100 INPUT.
+CASE sy-ucomm.
+  WHEN 'BACK'.
+    LEAVE PROGRAM.
+  WHEN 'FCREATE'.
+    MESSAGE | fcreate | TYPE 'I'.
+  WHEN 'FREAD'.
+    MESSAGE | fread | TYPE 'I'.
+  WHEN 'FUPDATE'.
+    MESSAGE | fupdate | TYPE 'I'.
+  WHEN 'FDELETE'.
+    MESSAGE | fdelete | TYPE 'I'.
+ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+FORM get_data .
+    IF gt_scarr IS INITIAL.
+      SELECT * FROM zmt_scarr INTO TABLE gt_scarr.
+    ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_FCAT
+*&---------------------------------------------------------------------*
+FORM set_fcat .
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+   EXPORTING
+     i_structure_name             = 'ZMT_SCARR'
+     i_bypassing_buffer           = 'X'
+    CHANGING
+      ct_fieldcat                  = gt_fieldcat
+   EXCEPTIONS
+     inconsistent_interface       = 1
+     program_error                = 2
+     OTHERS                       = 3
+            .
+  IF sy-subrc <> 0.
+     MESSAGE | Fcat couldn't create! | TYPE 'I' DISPLAY LIKE 'E'.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYO
+*&---------------------------------------------------------------------*
+FORM set_layo .
+  gs_layo-zebra = 'X'.
+  gs_layo-cwidth_opt = 'X'.
+  gs_layo-sel_mode = 'X'.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SHOW_SCARR
+*&---------------------------------------------------------------------*
+FORM show_scarr .
+  IF go_alv IS INITIAL.
+
+    CREATE OBJECT go_container
+      EXPORTING
+        container_name              =  'CC_CRUD'
+      EXCEPTIONS
+        cntl_error                  = 1
+        cntl_system_error           = 2
+        create_error                = 3
+        lifetime_error              = 4
+        lifetime_dynpro_dynpro_link = 5
+        OTHERS                      = 6 .
+    IF sy-subrc <> 0.
+     MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ENDIF.
+
+    CREATE OBJECT go_alv
+      EXPORTING
+        i_parent          =  go_container
+      EXCEPTIONS
+        error_cntl_create = 1
+        error_cntl_init   = 2
+        error_cntl_link   = 3
+        error_dp_create   = 4
+        OTHERS            = 5
+      .
+    IF sy-subrc <> 0.
+     MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ENDIF.
+
+  go_alv->set_table_for_first_display(
+    EXPORTING
+      is_layout                     = gs_layo
+    CHANGING
+      it_outtab                     = gt_scarr
+      it_fieldcatalog               = gt_fieldcat
+    EXCEPTIONS
+      invalid_parameter_combination = 1
+      program_error                 = 2
+      too_many_lines                = 3
+      OTHERS                        = 4
+  ).
+  IF sy-subrc <> 0.
+   MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+  ENDIF.
+
+  go_alv->refresh_table_display(
+    EXCEPTIONS
+      finished       = 1
+      others         = 2
+  ).
+  IF sy-subrc <> 0.
+   MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+ENDFORM.

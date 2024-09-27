@@ -1,0 +1,130 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_31
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 12: Sayfa 104’te yer alan database CRUD i#lemleri ile ilgili örne#i tekrar yaz#n ve i#lemleri
+*&ayr# ayr# performlar içerisinde gerçekle#tirin.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_31.
+
+DATA: gs_scarr TYPE scarr,
+      gt_scarr TYPE TABLE OF scarr.
+
+START-OF-SELECTION.
+
+PERFORM select.
+PERFORM insert.
+PERFORM update.
+PERFORM delete.
+
+" Show all available items in scarr table.
+FORM select .
+
+  SELECT * FROM scarr INTO TABLE gt_scarr.
+  SKIP.
+  ULINE.
+  LOOP AT gt_scarr INTO gs_scarr.
+    WRITE: / gs_scarr-carrid, gs_scarr-carrname, gs_scarr-currcode, gs_scarr-url.
+    CLEAR: gs_scarr.
+    SKIP.
+  ENDLOOP.
+  ULINE.
+  SKIP.
+ENDFORM.
+
+" It performs inserting item to table.
+FORM insert .
+  gs_scarr-carrid = 'YV'.
+  gs_scarr-carrname = 'Yavuz'.
+  gs_scarr-currcode = 'TL'.
+  gs_scarr-url = 'http://www.sample.com'.
+
+  INSERT INTO scarr VALUES gs_scarr.
+
+  IF sy-subrc = 0.
+    WRITE: / 'Record inserted successfully.'.
+  ELSE.
+    WRITE: / 'Failed to insert record.', sy-subrc.
+  ENDIF.
+
+  SELECT * FROM scarr INTO TABLE gt_scarr.
+  SKIP.
+  ULINE.
+  LOOP AT gt_scarr INTO gs_scarr.
+    WRITE: / gs_scarr-carrid, gs_scarr-carrname, gs_scarr-currcode, gs_scarr-url.
+    CLEAR: gs_scarr.
+    SKIP.
+  ENDLOOP.
+  ULINE.
+  SKIP.
+ENDFORM.
+
+" Display items after updated the table.
+FORM update .
+  DATA: lv_carrid TYPE scarr-carrid,
+        lv_new_url TYPE scarr-url,
+        lv_count TYPE i.
+
+  lv_carrid = 'YV'.
+  lv_new_url = 'https://www.example.com'.
+
+  UPDATE scarr SET url = lv_new_url WHERE carrid = lv_carrid.
+
+  IF sy-subrc = 0.
+    WRITE: / 'Record with CARRID =', lv_carrid, 'updated successfully to URL =', lv_new_url.
+  ELSEIF sy-subrc = 4.
+    WRITE: / 'No record found with CARRID =', lv_carrid.
+  ELSE.
+    WRITE: / 'Error updating record with CARRID =', lv_carrid, 'SY-SUBRC =', sy-subrc.
+  ENDIF.
+  " Display the updated record
+  SELECT * FROM scarr INTO TABLE gt_scarr WHERE carrid = lv_carrid.
+  IF sy-subrc = 0.
+    SKIP.
+    ULINE.
+    LOOP AT gt_scarr INTO gs_scarr.
+      WRITE: / gs_scarr-carrid, gs_scarr-carrname, gs_scarr-currcode, gs_scarr-url.
+      CLEAR: gs_scarr.
+      SKIP.
+    ENDLOOP.
+    ULINE.
+    SKIP.
+  ELSE.
+    WRITE: / 'No records found for display after update.'.
+  ENDIF.
+
+ENDFORM.
+
+" Realising the delete process.
+FORM delete .
+  DATA: lv_carrid TYPE scarr-carrid,
+        lv_count  TYPE i.
+
+  lv_carrid = 'YV'.
+
+  DELETE FROM scarr WHERE carrid = lv_carrid.
+
+  IF sy-subrc = 0.
+    WRITE: / 'Record with CARRID =', lv_carrid, 'deleted successfully.'.
+  ELSEIF sy-subrc = 4.
+    WRITE: / 'No record found with CARRID =', lv_carrid, 'to delete.'.
+  ELSE.
+    WRITE: / 'Error deleting record with CARRID =', lv_carrid, 'SY-SUBRC =', sy-subrc.
+  ENDIF.
+
+  " Display the remaining records in the SCARR table
+  SELECT * FROM scarr INTO TABLE gt_scarr.
+  IF sy-subrc = 0 AND NOT gt_scarr IS INITIAL.
+    SKIP.
+    ULINE.
+    LOOP AT gt_scarr INTO gs_scarr.
+      WRITE: / gs_scarr-carrid, gs_scarr-carrname, gs_scarr-currcode, gs_scarr-url.
+      CLEAR: gs_scarr.
+      SKIP.
+    ENDLOOP.
+    ULINE.
+    SKIP.
+  ELSE.
+    WRITE: / 'No records found in SCARR table after deletion.'.
+  ENDIF.
+
+ENDFORM.

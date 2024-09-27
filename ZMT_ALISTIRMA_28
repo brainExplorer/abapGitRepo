@@ -1,0 +1,28 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_28
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 9: Yeni bir rapor olu#turun ve kullan#c#dan 2 adet parametre alin. (isim ve soy isim). Rapor
+*&içerisinde 2 yeni perform olu#turun, ilk perform içerisinde isim ve soy ismi birle#tirin. #kinci perform
+*&içerisinde elde etti#iniz texti ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_28.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+  PARAMETERS: p_name  TYPE c LENGTH 50,
+              p_sname TYPE c LENGTH 50.
+  SELECTION-SCREEN end of BLOCK b1.
+
+DATA: gv_fname TYPE c LENGTH 102.
+
+PERFORM fullname USING p_name p_sname.
+
+FORM fullname  USING    p_p_name
+                        p_p_sname.
+
+CONCATENATE p_p_name p_p_sname INTO gv_fname SEPARATED BY space.
+PERFORM write USING gv_fname.
+ENDFORM.
+
+FORM write  USING    p_gv_fname.
+  WRITE p_gv_fname.
+ENDFORM.

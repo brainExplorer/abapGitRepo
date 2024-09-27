@@ -1,0 +1,45 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_40
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 20: Yeni bir fonksiyon yaz#n. Kullan#c#dan 1 adet gün ismi, 1 adet de say# alin. Kullan#c#n#n
+*girdi#i say# kadar gün sonra günlerden hangi gün olaca##n# hesaplay#n ve kullan#c#ya geri bildirin.
+*Fonksiyonu yeni yazaca##n#z bir raporda kullan#n. Sonucu ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_40.
+
+include ZMT_ALISTIRMA_40_top.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_40_TOP
+**&---------------------------------------------------------------------*
+*SELECTION-SCREEN begin of BLOCK b1.
+*  PARAMETERS: p_day TYPE c LENGTH 10,
+*              p_numb   TYPE int4.
+*SELECTION-SCREEN END OF BLOCK b1.
+*
+*DATA: gv_result TYPE string.
+include ZMT_ALISTIRMA_40_form.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_40_FORM
+**&---------------------------------------------------------------------*
+**&---------------------------------------------------------------------*
+**&      Form  DISPLAY
+**&---------------------------------------------------------------------*
+**       text
+**----------------------------------------------------------------------*
+**  -->  p1        text
+**  <--  p2        text
+**----------------------------------------------------------------------*
+*FORM display .
+*CALL FUNCTION 'ZMT_FM_DAY'
+*  EXPORTING
+*    iv_val          = p_numb
+*    iv_day          = p_day
+* IMPORTING
+*   EV_RESULT       =  gv_result
+*          .
+*MESSAGE | Result is : { gv_result } | TYPE 'I'.
+*
+*ENDFORM.
+START-OF-SELECTION.
+
+PERFORM display.

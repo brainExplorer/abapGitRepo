@@ -1,0 +1,19 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_14
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 14: Yeni bir rapor olu#turun. Rapor içerisinde 2 adet parametre tan#mlay#n. Kullan#c#dan bir
+*&uçu# #irketi bilgisi (carrid) ve yeni bir Currency alin. Kendi olu#turdu#unuz ve SCARR ile ayni satir
+*&yap#s#na sahip olan database tablosunda kullan#c#n#n girdi#i uçu# #irketi ile ayni uçu# #irketi bilgisine
+*&sahip olan sat#rlar#n “Currency” kolonlar#n# TL ile de#i#tirin. (Set-Update).
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_14.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME.
+  PARAMETERS: p_carrid TYPE zmt_scarr_01-carrid,
+              p_curr   TYPE zmt_scarr_01-currcode.
+SELECTION-SCREEN END OF BLOCK b1.
+
+IF sy-subrc IS INITIAL.
+  UPDATE zmt_scarr_01 SET currcode = p_curr WHERE carrid = p_carrid.
+  MESSAGE | { p_carrid }'s currency code updated to { p_curr } | TYPE 'S'.
+ENDIF.

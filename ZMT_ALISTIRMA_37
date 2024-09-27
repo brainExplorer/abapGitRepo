@@ -1,0 +1,78 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_37
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 17: Yeni bir fonksiyon yaz#n. Bir adet CARRNAME als#n. Gelen CARRNAME bilgisine göre
+*SCARR tablosunu okusun ve kullan#c#ya bir internal tablo versin. Ayr#ca elde edilen internal tablodaki
+*CARRID de#erlerini kullanarak SPFLI ve SFLIGHT tablolar#n# da okuyup kullan#c#ya versin. Fonksiyonu
+*yeni yazaca##n#z bir raporda kullan#n. Gelen sat#rlar# ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_37.
+
+INCLUDE ZMT_ALISTIRMA_37_TOP.
+*SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+*  PARAMETERS: p_cname TYPE s_carrname.
+*SELECTION-SCREEN END OF BLOCK b1.
+*
+*  DATA: gs_scarr   TYPE scarr,
+*        gs_spfli   TYPE spfli,
+*        gs_sflight TYPE sflight,
+*        gt_scarr   TYPE TABLE OF scarr,
+*        gt_spfli   TYPE TABLE OF spfli,
+*        gt_sflight TYPE TABLE OF sflight.
+
+
+INCLUDE ZMT_ALISTIRMA_37_FORM.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_37_FORM
+**&---------------------------------------------------------------------*
+**&---------------------------------------------------------------------*
+**&      Form  DISPLAY
+**&---------------------------------------------------------------------*
+**       text
+**----------------------------------------------------------------------*
+**  -->  p1        text
+**  <--  p2        text
+**----------------------------------------------------------------------*
+*FORM display .
+*
+*CALL FUNCTION 'ZMT_FM_ALL'
+*  EXPORTING
+*    iv_cname         = p_cname
+* importing
+*   et_scarr         = gt_scarr
+*   et_spfli         = gt_spfli
+*   et_sflight       = gt_sflight.
+*
+*          .
+*
+*
+*LOOP AT gt_scarr INTO gs_scarr.
+*  WRITE: / gs_scarr-carrid, gs_scarr-carrname, gs_scarr-currcode, gs_scarr-url.
+*  SKIP.
+*  ULINE.
+*ENDLOOP.
+*
+*LOOP AT gt_spfli INTO gs_spfli.
+*  WRITE: / gs_spfli-airpfrom, gs_spfli-airpto, gs_spfli-arrtime, gs_spfli-carrid, gs_spfli-cityfrom,gs_spfli-cityto,gs_spfli-connid,
+*           gs_spfli-countryfr, gs_spfli-countryto, gs_spfli-deptime, gs_spfli-deptime, gs_spfli-distance, gs_spfli-distid, gs_spfli-fltime,
+*           gs_spfli-fltype, gs_spfli-period.
+*  SKIP.
+*ENDLOOP.
+*ULINE.
+*
+*LOOP AT gt_sflight INTO gs_sflight.
+*  WRITE:/ gs_sflight-carrid, gs_sflight-connid, gs_sflight-currency, gs_sflight-fldate, gs_sflight-paymentsum, gs_sflight-planetype,
+*          gs_sflight-price, gs_sflight-seatsmax, gs_sflight-seatsmax_b, gs_sflight-seatsmax_f, gs_sflight-seatsocc, gs_sflight-seatsocc_b,
+*          gs_sflight-seatsocc_f.
+*  SKIP.
+*ENDLOOP.
+*ULINE.
+*
+*
+*
+*ENDFORM.
+
+
+START-OF-SELECTION.
+
+PERFORM display.

@@ -1,0 +1,111 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_44
+*&---------------------------------------------------------------------*
+*Al##t#rma – 5: Dördüncü al##t#rman#n aynisini yap#n ancak birinci metot, istenen tablolardan veri
+*çektikten sonra bu tablolar# export etmesin. Bu veriyi Class içerisinde olu#turulacak instance-public
+*attributelar içerisine kaydetsin. Program içerisinde bu attributelar# kullanarak veriyi ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_45.
+
+INCLUDE ZMT_ALISTIRMA_45_TOP.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_44_TOP
+**&---------------------------------------------------------------------*
+*SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+*  PARAMETERS: p_cid TYPE  s_carr_id OBLIGATORY,
+*              p_scarr     RADIOBUTTON GROUP x,
+*              p_spfli     RADIOBUTTON GROUP x,
+*              p_sflght   RADIOBUTTON GROUP x.
+*SELECTION-SCREEN END OF BLOCK b1.
+*
+*DATA: gt_scarr   TYPE zmt_tt_scarr,
+*      gt_sflight TYPE zmt_tt_sflight,
+*      gt_spfli   TYPE zmt_tt_spfli,
+*      gs_scarr   TYPE scarr,
+*      gs_spfli   TYPE spfli,
+*      gs_sflight TYPE sflight,
+*      go_class  TYPE REF TO zmt_class_db_1.
+INCLUDE ZMT_ALISTIRMA_45_FORM.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_45_FORM
+**&---------------------------------------------------------------------*
+*CREATE OBJECT go_class.
+*
+*" Display selected table
+*FORM display .
+*  IF p_scarr IS NOT INITIAL.
+*     go_class->get_requests(
+*      EXPORTING
+*        iv_val1   = p_cid
+*        iv_choice = '0'
+*    ).
+*    PERFORM scarr.
+*
+*  ELSEIF p_spfli IS NOT INITIAL.
+*        go_class->get_requests(
+*         EXPORTING
+*          iv_val1   = p_cid
+*          iv_choice = '1'
+*        ).
+*     PERFORM spfli.
+*
+*  ELSEIF p_sflght IS NOT INITIAL.
+*     go_class->get_requests(
+*        EXPORTING
+*          iv_val1   = p_cid
+*          iv_choice = '2'
+*     ).
+*     PERFORM sflight.
+*
+*  ENDIF.
+*ENDFORM.
+*
+*" Display scarr
+*FORM scarr .
+*  IF sy-subrc EQ 0.
+**        gt_scarr = go_class->at_scarr.
+*      LOOP AT go_class->at_scarr INTO gs_scarr.
+*         WRITE: / gs_scarr-carrid, gs_scarr-carrname, gs_scarr-currcode, gs_scarr-url.
+*         SKIP.
+*      ENDLOOP.
+*      ULINE.
+*     ELSE.
+*       MESSAGE | Occured an error while reading the tables | TYPE 'S' DISPLAY LIKE 'E'.
+*     ENDIF.
+*ENDFORM.
+*
+*" Display spfli
+*FORM spfli .
+*    gt_spfli = go_class->at_spfli.
+*   IF sy-subrc EQ 0.
+*      LOOP AT gt_spfli INTO gs_spfli.
+*         WRITE: / gs_spfli-airpfrom, gs_spfli-airpto, gs_spfli-arrtime, gs_spfli-carrid, gs_spfli-cityfrom,
+*                  gs_spfli-cityto, gs_spfli-connid, gs_spfli-countryfr, gs_spfli-countryfr, gs_spfli-countryto,
+*                  gs_spfli-deptime, gs_spfli-distance, gs_spfli-distid, gs_spfli-fltime, gs_spfli-fltype, gs_spfli-period.
+*         SKIP.
+*      ENDLOOP.
+*      ULINE.
+*    ELSE.
+*       MESSAGE | Occured an error while reading the tables | TYPE 'S' DISPLAY LIKE 'E'.
+*    ENDIF.
+*ENDFORM.
+*
+*" Display sflight
+*FORM sflight .
+*       gt_sflight = go_class->at_sflight.
+*       IF sy-subrc eq 0.
+*       LOOP AT gt_sflight INTO gs_sflight.
+*         WRITE: / gs_sflight-carrid,gs_sflight-connid, gs_sflight-currency, gs_sflight-fldate, gs_sflight-fldate,
+*                  gs_sflight-paymentsum, gs_sflight-planetype, gs_sflight-price, gs_sflight-seatsmax, gs_sflight-seatsmax_b,
+*                  gs_sflight-seatsmax_f, gs_sflight-seatsocc, gs_sflight-seatsocc_b, gs_sflight-seatsocc_f.
+*         SKIP.
+*     ENDLOOP.
+*     ULINE.
+*     ELSE.
+*       MESSAGE | An error occured while selecting the table | TYPE 'S' DISPLAY LIKE 'E'.
+*     ENDIF.
+*ENDFORM.
+
+START-OF-SELECTION.
+
+PERFORM display.

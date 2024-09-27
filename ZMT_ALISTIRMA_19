@@ -1,0 +1,50 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_19
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 19: Yeni bir rapor olu#turun. Rapor içerisinde 3 adet parametre tan#mlay#n. Kullan#c#dan bir
+*&Fldate alin. 2 ve 3’üncü parametreler radiobutton olsun. #lki girilen tarihten büyük, ikincisi ise girilen
+*&tarihten küçük seklinde isimlendirilsin. Kendi olu#turdu#unuz ve SFLIGHT ile ayni satir yap#s#na sahip
+*&olan database tablosunda kullan#c#n#n girdi#i Fldate bilgisinden önce veya sonra olanlar# (öncesinin
+*&veya sonras#n#n silinece#i 2 ve 3’üncü parametrelere göre belirlenecektir) kal#c# olarak silin. (Delete)
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_19.
+DATA: gs_sflight TYPE zmt_sflight_01,
+      gt_sflight TYPE TABLE OF zmt_sflight_01.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME.
+  PARAMETERS: p_date    TYPE zmt_sflight_01-fldate OBLIGATORY VALUE CHECK, "only for required fields
+              p_prev     RADIOBUTTON GROUP yvz,
+              p_after    RADIOBUTTON GROUP yvz.
+SELECTION-SCREEN END OF BLOCK b1.
+
+START-OF-SELECTION.
+
+IF p_prev EQ abap_true.
+
+  SELECT * FROM zmt_sflight_01 INTO TABLE gt_sflight WHERE fldate < p_date.
+  IF sy-subrc <> 0.
+    MESSAGE |No records found for the given flight date. Please check your input again.| TYPE 'I'.
+    RETURN. " Exit the program if no records are found
+  ENDIF.
+
+  LOOP AT gt_sflight INTO gs_sflight.
+    DELETE FROM zmt_sflight_01
+    WHERE fldate EQ gs_sflight-fldate.
+  ENDLOOP.
+  MESSAGE |Records before the given date have been deleted successfully.| TYPE 'S'.
+
+ELSEIF p_after EQ abap_true.
+
+  SELECT * FROM zmt_sflight_01 INTO TABLE gt_sflight WHERE fldate > p_date.
+  IF sy-subrc <> 0.
+    MESSAGE |No records found for the given flight date. Please check your input again.| TYPE 'I'.
+    RETURN. " Exit the program if no records are found
+  ENDIF.
+
+  LOOP AT gt_sflight INTO gs_sflight.
+    DELETE FROM zmt_sflight_01
+    WHERE fldate EQ gs_sflight-fldate.
+  ENDLOOP.
+  MESSAGE |Records after the given date have been deleted successfully.| TYPE 'S'.
+
+ENDIF.

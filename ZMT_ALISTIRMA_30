@@ -1,0 +1,73 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_30
+*&---------------------------------------------------------------------*
+*& Al##t#rma – 11: Yeni bir rapor olu#turun ve kullan#c#dan 3 adet parametre alin. (Tamami radiobutton
+*& olsun. #simlendirilmeleri “SCARR”, “SPFLI” ve “SFLIGHT” olsun. Kullan#c# hangi radiobuttonu seçerse
+*& sat#rlar#n# okuyup ekrana yazd#r#n. ##lemleri ayr# ayr# performlar içerisinde gerçekle#tirin.)
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_30.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+  PARAMETERS: p_rad0 RADIOBUTTON GROUP r,
+              p_rad1 RADIOBUTTON GROUP r,
+              p_rad2 RADIOBUTTON GROUP r.
+ SELECTION-SCREEN END OF BLOCK b1.
+
+data: gs_scarr TYPE scarr,
+     gs_spfli TYPE spfli,
+     gs_sflight TYPE sflight,
+     gt_scarr TYPE TABLE OF scarr,
+     gt_spfli TYPE TABLE OF spfli,
+     gt_sflight TYPE TABLE OF sflight.
+
+IF p_rad0 EQ 'X'.
+  PERFORM p_scarr.
+ELSEIF p_rad1 EQ 'X'.
+  PERFORM p_spfli.
+ELSEIF p_rad2 EQ 'X'.
+  PERFORM p_sflight.
+ELSE.
+  MESSAGE 'Something went wrong' TYPE 'S' DISPLAY LIKE 'E'.
+ENDIF.
+
+FORM p_scarr .
+
+  select * from scarr INTO TABLE gt_scarr.
+  LOOP AT gt_scarr INTO gs_scarr.
+     WRITE: / gs_scarr-carrid, gs_scarr-carrname, gs_scarr-currcode, gs_scarr-url.
+     SKIP.
+  ENDLOOP.
+  ULINE.
+  clear: gs_scarr.
+ENDFORM.
+
+
+FORM p_spfli .
+
+  select * from spfli INTO TABLE gt_spfli.
+  LOOP AT gt_spfli INTO gs_spfli.
+    SKIP.
+    WRITE:/ gs_spfli-airpfrom,    gs_spfli-airpto,    gs_spfli-arrtime,   gs_spfli-carrid,
+            gs_spfli-cityfrom,    gs_spfli-cityto,    gs_spfli-connid,    gs_spfli-countryfr,
+            gs_spfli-countryto,   gs_spfli-deptime,   gs_spfli-distance,  gs_spfli-distid,
+            gs_spfli-fltime,      gs_spfli-fltype,    gs_spfli-period.
+    SKIP.
+  ENDLOOP.
+  ULINE.
+  CLEAR: gs_spfli.
+ENDFORM.
+
+
+FORM p_sflight .
+
+  SELECT * from sflight INTO TABLE gt_sflight.
+  LOOP AT gt_sflight INTO gs_sflight.
+    SKIP.
+    WRITE: / gs_sflight-carrid,   gs_sflight-connid,    gs_sflight-currency,    gs_sflight-fldate,    gs_sflight-paymentsum,
+             gs_sflight-planetype,gs_sflight-price,     gs_sflight-seatsmax,    gs_sflight-seatsmax_b,gs_sflight-seatsmax_f,
+             gs_sflight-seatsocc, gs_sflight-seatsocc_b,gs_sflight-seatsocc_f.
+    SKIP.
+  ENDLOOP.
+  ULINE.
+  clear: gs_sflight.
+ENDFORM.

@@ -1,0 +1,67 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_15
+*&---------------------------------------------------------------------*
+*&Yeni bir rapor olu#turun. Rapor içerisinde 4 adet parametre tan#mlay#n. Kullan#c#dan bir
+*&uçu# #irketi bilgisi (carrid) ve 1 ile 100 aras#nda bir say# alin. (Ek olarak 2 adet radiobutton olu#turun.
+*&Birincisi artt#rmak için ikincisi ise azaltmak için) Kendi olu#turdu#unuz ve SPFLI ile ayni satir yap#s#na
+*&sahip olan database tablosunda kullan#c#n#n girdi#i uçu# #irketi ile ayni uçu# #irketi bilgisine sahip olan
+*&sat#rlar#n “Distance” kolonundaki hücrelerini, kullan#c#n#n girdi#i ikinci parametredeki de#er kadar
+*&de#i#tirin. (Tan#mlanan 3 ve 4’üncü parametrelerden hangisi seçildiyse artt#rmaya veya azaltmaya
+*&karar verin). (Set-Update).
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_15.
+
+DATA: gs_spfli TYPE zmt_spfli_01,
+      gt_spfli TYPE TABLE OF zmt_spfli_01,
+      gv_distance TYPE zmt_spfli_01-distance.
+
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME.
+  PARAMETERS: p_carrid    TYPE zmt_spfli_01-carrid,
+              p_number    TYPE int1,
+              p_inc  RADIOBUTTON GROUP yvz,
+              p_dec  RADIOBUTTON GROUP yvz.
+SELECTION-SCREEN END OF BLOCK b1.
+
+" Check the value is between 1 and 100
+" For more information : https://help.sap.com/doc/abapdocu_750_index_htm/7.50/en-US/abapat_selection-screen_events.htm#!ABAP_ALTERNATIVE_4@4@
+AT SELECTION-SCREEN ON p_number.
+  IF p_number < 1 OR p_number > 100.
+    MESSAGE | Please select a value between 1 and 100 | TYPE 'S' DISPLAY LIKE 'E'.
+  ENDIF.
+
+START-OF-SELECTION.
+
+SELECT * FROM zmt_spfli_01
+  INTO TABLE gt_spfli
+  WHERE carrid = p_carrid.
+
+" additionaly you can use second controller. No auth for carrier : sy-subrc eq 4
+IF sy-subrc <> 0.
+  MESSAGE | No records found for the given airline code. Please check your id again. | TYPE 'I'.
+ENDIF.
+
+LOOP AT gt_spfli INTO gs_spfli.
+  gv_distance = gs_spfli-distance.
+
+  IF p_inc EQ abap_true.
+    gv_distance = gv_distance + p_number.
+  ELSEIF p_dec EQ abap_true.
+    gv_distance = gv_distance - p_number.
+  ENDIF.
+
+" we use carrid and connid therefore we can have multiple rows
+" and we have to split they
+  UPDATE zmt_spfli_01
+  SET distance = gv_distance
+  WHERE carrid = gs_spfli-carrid
+  AND   connid = gs_spfli-connid.
+
+ENDLOOP.
+
+" Check the result
+IF sy-subrc IS INITIAL.
+  MESSAGE | Updating is completed succesfully. | TYPE 'S'.
+ELSE.
+  MESSAGE | An error occured while updating. | TYPE 'E'.
+ENDIF.

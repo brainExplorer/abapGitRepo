@@ -1,0 +1,125 @@
+*&---------------------------------------------------------------------*
+*& Report ZMC_RAPOR_118
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmc_rapor_118.
+
+"Alistirma_1:
+*PARAMETERS: gv_msg TYPE string.
+*
+*START-OF-SELECTION.
+*
+*MESSAGE gv_msg TYPE 'S'.
+
+"Alistirma_2:
+*PARAMETERS: gv_msg TYPE string.
+*
+*START-OF-SELECTION.
+*
+*MESSAGE gv_msg TYPE 'I'.
+
+"Alistirma_3:
+*PARAMETERS: gv_msg TYPE string.
+*
+*START-OF-SELECTION.
+*
+*MESSAGE gv_msg TYPE 'S' DISPLAY LIKE 'E'.
+
+"Alistirma_4:
+*PARAMETERS: p_1 TYPE i,
+*            p_2 TYPE i.
+*
+*
+*START-OF-SELECTION.
+*
+*IF p_1 >= p_2.
+*  MESSAGE 'Ilk girilen sayi ikinci sayidan kücük olmalidir' TYPE 'S' DISPLAY LIKE 'E'.
+*  EXIT.
+*ENDIF.
+*
+*DO.
+*  p_1 = p_1 + 1.
+*
+*  IF p_1 = p_2.
+*    MESSAGE | Döngü icerisinde { sy-index } tur atildi | TYPE 'I'.
+*    EXIT.
+*  ENDIF.
+*
+*ENDDO.
+
+"Alistirma_5:
+*PARAMETERS: p_1 TYPE i,
+*            p_2 TYPE i.
+*
+*
+*START-OF-SELECTION.
+*
+*IF p_1 >= p_2.
+*  MESSAGE 'Ilk girilen sayi ikinci sayidan kücük olmalidir' TYPE 'S' DISPLAY LIKE 'E'.
+*  EXIT.
+*ENDIF.
+*
+*WHILE p_1 < p_2.
+*  p_1 = p_1 + 1.
+*
+*  IF p_1 = p_2.
+*    MESSAGE | Döngü icerisinde { sy-index } tur atildi | TYPE 'I'.
+*    EXIT.
+*  ENDIF.
+*
+*ENDWHILE.
+
+"Alistirma_6:
+*PARAMETERS: p_renk TYPE c LENGTH 12.
+*
+*START-OF-SELECTION.
+*
+*CASE p_renk.
+*  WHEN 'SARI'.
+*    MESSAGE | Girmis oldugunuz rengin ingilizce karsiligi YELLOW.| TYPE 'I'.
+*  WHEN 'YESIL'.
+*    MESSAGE | Girmis oldugunuz rengin ingilizce karsiligi GREEN.| TYPE 'I'.
+*  WHEN 'MAVI'.
+*    MESSAGE | Girmis oldugunuz rengin ingilizce karsiligi BLUE.| TYPE 'I'.
+*  WHEN 'KIRMIZI'.
+*    MESSAGE | Girmis oldugunuz rengin ingilizce karsiligi RED.| TYPE 'I'.
+*  WHEN 'SIYAH'.
+*    MESSAGE | Girmis oldugunuz rengin ingilizce karsiligi BLACK.| TYPE 'I'.
+*  WHEN 'BEYAZ'.
+*    MESSAGE | Girmis oldugunuz rengin ingilizce karsiligi WHITE.| TYPE 'I'.
+*
+*  WHEN OTHERS.
+*    MESSAGE | Girmis oldugunuz rengin ingilizce karsiligi bulunamamistir.| TYPE 'S' DISPLAY LIKE 'E'.
+*
+*ENDCASE.
+
+"Alistirma_7:
+*PARAMETERS: p_1      TYPE i,
+*            p_2      TYPE i,
+*            p_symbol TYPE c LENGTH 1.
+*
+*DATA: gv_result TYPE p DECIMALS 3.
+*
+*START-OF-SELECTION.
+*
+*  CASE p_symbol.
+*    WHEN '+'.
+*      gv_result = p_1 + p_2.
+*    WHEN '-'.
+*      gv_result = p_1 - p_2.
+*    WHEN '*'.
+*      gv_result = p_1 * p_2.
+*    WHEN '/'.
+*      IF p_2 IS NOT INITIAL. "IF p_2 NE 0.
+*        gv_result = p_1 / p_2.
+*      ELSE.
+*        MESSAGE |Bölen 0 olamaz!| TYPE 'S' DISPLAY LIKE 'E'.
+*        EXIT.
+*      ENDIF.
+*    WHEN OTHERS.
+*      MESSAGE |Yanlis islem sembolü!| TYPE 'S' DISPLAY LIKE 'E'.
+*      EXIT.
+*  ENDCASE.
+*
+*  MESSAGE | { gv_result } | TYPE 'I'.

@@ -1,0 +1,22 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_13
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_13.
+
+DATA: gs_sflight TYPE sflight,
+      gt_sflight TYPE TABLE OF sflight.
+
+START-OF-SELECTION.
+
+SELECT * FROM sflight INTO TABLE gt_sflight.
+
+IF sy-subrc IS INITIAL.
+  LOOP AT gt_sflight INTO gs_sflight.
+    INSERT zmt_sflight_01 FROM gs_sflight.
+  ENDLOOP.
+  MESSAGE  'sflight table added to the zmt_sflight_01 table' TYPE 'S'.
+ELSE.
+  MESSAGE 'sflight table could not add to the zmt_sflight_01 table' TYPE 'S' DISPLAY LIKE 'E'.
+ENDIF.

@@ -1,0 +1,58 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_24
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 5: Yeni bir rapor olu#turun ve kullan#c#dan 4 adet parametre alin. (2 adet BOOKID (SBOOK
+*&tablosu BOOKID kolonu), 1 adet Radiobutton (E#ittir isminde), 1 adet Radiobutton (Aras#nda isminde)).
+*&Parametrelerden gelen veriyi Type Range komutu kullanarak olu#turaca##n#z Select-Options yap#lar#na
+*&aktar#n ve SBOOK tablosundan sat#rlar# okuyarak ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_24.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001 NO INTERVALS.
+  PARAMETERS: p_bid1 TYPE s_book_id,
+              p_bid2 TYPE s_book_id,
+              p_eq   RADIOBUTTON GROUP yvz,
+              p_bt   RADIOBUTTON GROUP yvz.
+SELECTION-SCREEN END OF BLOCK b1.
+
+TYPES: BEGIN OF gty_so_bid,
+       sign     TYPE c LENGTH 1,
+       options  TYPE c LENGTH 2,
+       low      TYPE s_book_id,
+       high     TYPE s_book_id,
+  END OF gty_so_bid.
+
+DATA: gt_bid TYPE RANGE OF s_book_id,
+      gs_bid TYPE gty_so_bid,
+      gt_sbook TYPE TABLE OF sbook,
+      gs_sbook TYPE sbook.
+
+START-OF-SELECTION.
+
+gs_bid-sign = 'I'.
+gs_bid-low  = p_bid1.
+gs_bid-high = p_bid2.
+
+IF p_eq EQ 'X'.
+  IF p_bid1 IS INITIAL.
+    MESSAGE 'Please fill this area' TYPE 'S' DISPLAY LIKE 'E'.
+    EXIT.
+  ENDIF.
+  gs_bid-options = 'EQ'.
+  APPEND gs_bid TO gt_bid.
+  CLEAR: gs_bid.
+  SELECT * FROM sbook INTO TABLE gt_sbook WHERE bookid IN gt_bid.
+  LOOP AT gt_sbook INTO gs_sbook.
+    WRITE: / gs_sbook-bookid, gs_sbook-class, gs_sbook-counter, gs_sbook-custtype.
+    SKIP.
+  ENDLOOP.
+ELSEIF p_bt EQ 'X'.
+  gs_bid-options = 'BT'.
+  APPEND gs_bid TO gt_bid.
+  CLEAR: gs_bid.
+    SELECT * FROM sbook INTO TABLE gt_sbook WHERE bookid IN gt_bid.
+  LOOP AT gt_sbook INTO gs_sbook.
+    WRITE: / gs_sbook-bookid, gs_sbook-class, gs_sbook-counter.
+    SKIP.
+  ENDLOOP.
+ENDIF.

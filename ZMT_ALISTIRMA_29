@@ -1,0 +1,33 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_29
+*&---------------------------------------------------------------------*
+*& Al##t#rma – 10: Yeni bir rapor olu#turun ve kullan#c#dan 1 adet parametre alin. (1 adet say#, 2 adet
+*& radiobutton). Radiobuttonlar “Karesi” ve “Küpü” seklinde isimlendirilsin. Kullan#c# hangi radiobuttonu
+*& seçtiyse sonucu hesaplay#p ekrana yazd#r#n. Gelen say#n#n karesini ve küpünü bulma i#lemlerini ayr#
+*& ayr# performlar içerisinde gerçekle#tirin.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_29.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+  PARAMETERS: p_numb TYPE int2,
+              p_sqr  RADIOBUTTON GROUP x,
+              p_cube RADIOBUTTON GROUP x.
+SELECTION-SCREEN END OF BLOCK b1.
+
+IF p_numb is NOT INITIAL.
+ IF p_sqr eq 'X'.
+   PERFORM square.
+ ELSEIF p_cube eq 'X'.
+  PERFORM cube.
+ else.
+  MESSAGE | Occured an error while calculation { p_numb } number. | TYPE 'S' DISPLAY LIKE 'E'.
+ ENDIF.
+ENDIF.
+
+FORM square .
+  WRITE: | square of { p_numb } is : { p_numb * p_numb } |.
+ENDFORM.
+
+FORM cube .
+    WRITE: | Cube of { p_numb } is : { p_numb * p_numb * p_numb } |.
+ENDFORM.

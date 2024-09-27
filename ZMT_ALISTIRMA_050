@@ -1,0 +1,192 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_050
+*&---------------------------------------------------------------------*
+*& Al##t#rma – 3: SCARR tablosu için Container ALV haz#rlay#n. 2 adet
+*& buton olu#turun. #lk butona bas#ld###nda tek sat#rlar#, ikinci butona
+*& bas#ld###nda çift numaral# sat#rlar# istedi#iniz bir renk ile
+*& renklendirin.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_050.
+
+DATA: go_alv        TYPE REF TO cl_gui_alv_grid,
+      go_container  TYPE REF TO cl_gui_custom_container,
+      gt_fcat       TYPE lvc_t_fcat,
+      gs_layo       TYPE lvc_s_layo.
+
+TYPES: BEGIN OF gty_list.
+         INCLUDE STRUCTURE scarr.
+TYPES:   row_color TYPE c LENGTH 4.
+TYPES: END OF gty_list.
+
+DATA: gt_scarr TYPE TABLE OF gty_list,
+      gs_scarr TYPE gty_list.
+
+START-OF-SELECTION.
+  CALL SCREEN 0102.
+
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0102  OUTPUT
+*&---------------------------------------------------------------------*
+MODULE status_0102 OUTPUT.
+  SET PF-STATUS 'STATUS0102'.
+  SET TITLEBAR 'COLOR SCREEN.'.
+
+  PERFORM get_data.
+  PERFORM set_fcat.
+  PERFORM set_layo.
+  PERFORM show_container.
+ENDMODULE.
+
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0102  INPUT
+*&---------------------------------------------------------------------*
+MODULE user_command_0102 INPUT.
+  DATA: lv_color  TYPE lvc_emphsz,
+        lt_row_no TYPE lvc_t_roid,
+        ls_scarr  TYPE gty_list.
+
+  CASE sy-ucomm.
+    WHEN '&BACK&'.
+      SET SCREEN 0.
+
+"   this code coloring odd number rows.
+    WHEN 'ODD'.
+"     Get the color with method
+      CALL FUNCTION 'ZMK_COLOR_SELECTION'
+        IMPORTING
+          ev_color = lv_color.
+      IF sy-subrc NE 0.
+        MESSAGE 'Occurred an error while selecting a color.' TYPE 'S' DISPLAY LIKE 'E'.
+        EXIT.
+      ENDIF.
+
+      LOOP AT gt_scarr INTO gs_scarr.
+        IF sy-tabix MOD 2 EQ 1.
+          gs_scarr-row_color = lv_color.
+          MODIFY gt_scarr FROM gs_scarr TRANSPORTING row_color WHERE carrid = gs_scarr-carrid.
+        ENDIF.
+      ENDLOOP.
+
+    WHEN 'EVEN'.
+      CALL FUNCTION 'ZMK_COLOR_SELECTION'
+        IMPORTING
+          ev_color = lv_color.
+      IF sy-subrc NE 0.
+        MESSAGE 'Occurred an error while selecting a color.' TYPE 'S' DISPLAY LIKE 'E'.
+      ENDIF.
+
+      LOOP AT gt_scarr INTO gs_scarr.
+        IF sy-tabix MOD 2 EQ 0.
+          gs_scarr-row_color = lv_color.
+          MODIFY gt_scarr FROM gs_scarr TRANSPORTING row_color WHERE carrid = gs_scarr-carrid.
+        ENDIF.
+      ENDLOOP.
+
+  ENDCASE.
+ENDMODULE.
+
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+FORM get_data.
+  IF gt_scarr IS INITIAL.
+    SELECT * FROM scarr INTO TABLE gt_scarr.
+  ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  SET_FCAT
+*&---------------------------------------------------------------------*
+FORM set_fcat.
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+    EXPORTING
+      i_structure_name       = 'SCARR'
+      i_client_never_display = 'X'
+      i_bypassing_buffer     = abap_true
+    CHANGING
+      ct_fieldcat            = gt_fcat
+    EXCEPTIONS
+      inconsistent_interface = 1
+      program_error          = 2
+      OTHERS                 = 3.
+  IF sy-subrc <> 0.
+    MESSAGE 'Occurred an error while creating field catalog.' TYPE 'S' DISPLAY LIKE 'E'.
+  ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYO
+*&---------------------------------------------------------------------*
+FORM set_layo.
+  gs_layo-zebra      = 'X'.
+  gs_layo-cwidth_opt = 'X'.
+  gs_layo-sel_mode   = 'A'.
+  gs_layo-info_fname = 'ROW_COLOR'.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  SHOW_CONTAINER
+*&---------------------------------------------------------------------*
+FORM show_container.
+  IF go_alv IS INITIAL.
+    CREATE OBJECT go_container
+      EXPORTING
+        container_name = 'CC_SCARR'
+      EXCEPTIONS
+        cntl_error                  = 1
+        cntl_system_error           = 2
+        create_error                = 3
+        lifetime_error              = 4
+        lifetime_dynpro_dynpro_link = 5
+        OTHERS                      = 6.
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      LEAVE PROGRAM.
+    ENDIF.
+
+    CREATE OBJECT go_alv
+      EXPORTING
+        i_parent = go_container
+      EXCEPTIONS
+        error_cntl_create = 1
+        error_cntl_init   = 2
+        error_cntl_link   = 3
+        error_dp_create   = 4
+        OTHERS            = 5.
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      LEAVE PROGRAM.
+    ENDIF.
+
+    go_alv->set_table_for_first_display(
+      EXPORTING
+"    Importing role for refreshing : is_layout.
+        is_layout       = gs_layo
+      CHANGING
+        it_outtab       = gt_scarr
+        it_fieldcatalog = gt_fcat
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4 ).
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      LEAVE PROGRAM.
+    ENDIF.
+  ELSE.
+    go_alv->refresh_table_display(
+      EXCEPTIONS
+        finished = 1
+        OTHERS   = 2 ).
+
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      LEAVE PROGRAM.
+    ENDIF.
+  ENDIF.
+ENDFORM.

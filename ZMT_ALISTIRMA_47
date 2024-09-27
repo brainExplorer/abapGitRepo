@@ -1,0 +1,286 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_47
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 7: Yeni bir rapor olu#turun. #çerisinde 3 adet radiobutton olsun. Radibuttonlarin her birinin
+*ismi bir db tablosu olsun. Radiobutonlar yard#m#yla kullan#c#dan 1 adet db tablosu ismi al#n. Yeni bir
+*Class olu#turun ve 4 adet metot tan#mlay#n. (Tamam# Instance-Public) Gelen db tablosu ismini
+*kullanarak s#ras#yla veri çekin, fieldcatalog haz#rlay#n, Layout haz#rlay#n ve kullan#c# hangi tabloyu
+*seçtiyse ekranda o tablonun ALV’sini gösterin.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_47.
+
+INCLUDE zmt_alistirma_47_top.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_47_TOP
+**&---------------------------------------------------------------------*
+*SELECTION-SCREEN BEGIN OF BLOCK b1.
+*  PARAMETERS: p_scarr RADIOBUTTON GROUP x,
+*              p_spfli RADIOBUTTON GROUP x,
+*              p_sflg  RADIOBUTTON GROUP x,
+*              p_all   RADIOBUTTON GROUP x.
+*SELECTION-SCREEN END OF BLOCK b1.
+*
+*DATA: gt_scarr TYPE zmt_tt_scarr,
+*      gt_spfli TYPE zmt_tt_spfli,
+*      gt_sflg  TYPE zmt_tt_sflight,
+*      gs_scarr TYPE scarr,
+*      gs_spfli TYPE spfli,
+*      gs_sflg  TYPE sflight,
+*      go_tbl   TYPE REF TO zmt_class_tbl,
+*      gt_fieldcat TYPE LVC_T_FCAT,
+*      gs_layout   TYPE LVC_S_LAYO.
+INCLUDE zmt_alistirma_47_form.
+
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_ALISTIRMA_47_FORM
+**&---------------------------------------------------------------------*
+*create OBJECT go_tbl.
+*
+*FORM display .
+*
+*  IF p_scarr IS NOT INITIAL.
+*    go_tbl->get_scarr(
+*      IMPORTING
+*        ev_scarr = gt_scarr    " Table type of scarr
+*    ).
+*    PERFORM scarr.
+*
+*  ELSEIF p_spfli IS NOT INITIAL.
+*    go_tbl->get_spfli(
+*      IMPORTING
+*        et_spfli = gt_spfli    " Table type of spfli
+*    ).
+*    PERFORM spfli.
+*
+*  ELSEIF p_sflg is NOT INITIAL.
+*    go_tbl->get_sflight(
+*      IMPORTING
+*        et_sflight = gt_sflg
+*    ).
+*    PERFORM sflight.
+*
+*  ELSEIF p_all IS NOT INITIAL.
+*    go_tbl->get_all(
+*      IMPORTING
+*        et_spfli   = gt_spfli
+*        et_sflight = gt_sflg
+*        et_scarr   = gt_scarr
+*    ).
+*    PERFORM all_tables.
+*
+*  ENDIF.
+*ENDFORM.
+*
+*" Display scarr table with alv
+*FORM scarr .
+*CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+* EXPORTING
+*   I_STRUCTURE_NAME             = 'SCARR'
+*   I_CLIENT_NEVER_DISPLAY       = 'X'
+*   I_BYPASSING_BUFFER           = abap_true
+*  CHANGING
+*    ct_fieldcat                  = gt_fieldcat
+* EXCEPTIONS
+*   INCONSISTENT_INTERFACE       = 1
+*   PROGRAM_ERROR                = 2
+*   OTHERS                       = 3
+*          .
+*  IF sy-subrc <> 0.
+*   MESSAGE | Error : { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*
+*  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY_LVC'
+*   EXPORTING
+*     I_CALLBACK_PROGRAM                = sy-repid
+*     IS_LAYOUT_LVC                     = gs_layout
+*     IT_FIELDCAT_LVC                   = gt_fieldcat
+*    TABLES
+*      t_outtab                          = gt_scarr
+*   EXCEPTIONS
+*     PROGRAM_ERROR                     = 1
+*     OTHERS                            = 2
+*            .
+*  IF sy-subrc <> 0.
+*    MESSAGE | Error : { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*
+*ENDFORM.
+*
+*" Display spfli table with alv
+*FORM spfli .
+*  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+* EXPORTING
+*   I_STRUCTURE_NAME             = 'SPFLI'
+*   I_CLIENT_NEVER_DISPLAY       = 'X'
+*   I_BYPASSING_BUFFER           = abap_true
+*  CHANGING
+*    ct_fieldcat                  = gt_fieldcat
+* EXCEPTIONS
+*   INCONSISTENT_INTERFACE       = 1
+*   PROGRAM_ERROR                = 2
+*   OTHERS                       = 3
+*          .
+*  IF sy-subrc <> 0.
+*   MESSAGE | Error : { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*
+*  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY_LVC'
+*   EXPORTING
+*     I_CALLBACK_PROGRAM                = sy-repid
+*     IS_LAYOUT_LVC                     = gs_layout
+*     IT_FIELDCAT_LVC                   = gt_fieldcat
+*    TABLES
+*      t_outtab                          = gt_spfli
+*   EXCEPTIONS
+*     PROGRAM_ERROR                     = 1
+*     OTHERS                            = 2
+*            .
+*  IF sy-subrc <> 0.
+*    MESSAGE | Error : { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*ENDFORM.
+*
+*" Display sflight table with alv
+*FORM sflight .
+*  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+* EXPORTING
+*   I_STRUCTURE_NAME             = 'SFLIGHT'
+*   I_CLIENT_NEVER_DISPLAY       = 'X'
+*   I_BYPASSING_BUFFER           = abap_true
+*  CHANGING
+*    ct_fieldcat                  = gt_fieldcat
+* EXCEPTIONS
+*   INCONSISTENT_INTERFACE       = 1
+*   PROGRAM_ERROR                = 2
+*   OTHERS                       = 3
+*          .
+*  IF sy-subrc <> 0.
+*   MESSAGE | Error : { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*
+*  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY_LVC'
+*   EXPORTING
+*     I_CALLBACK_PROGRAM                = sy-repid
+*     IS_LAYOUT_LVC                     = gs_layout
+*     IT_FIELDCAT_LVC                   = gt_fieldcat
+*    TABLES
+*      t_outtab                          = gt_sflg
+*   EXCEPTIONS
+*     PROGRAM_ERROR                     = 1
+*     OTHERS                            = 2
+*            .
+*  IF sy-subrc <> 0.
+*    MESSAGE | Error : { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*ENDFORM.
+*
+*" Display all table types in one perform
+*FORM all_tables .
+*
+*  " scarr table
+*  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+* EXPORTING
+*   I_STRUCTURE_NAME             = 'SCARR'
+*   I_CLIENT_NEVER_DISPLAY       = 'X'
+*   I_BYPASSING_BUFFER           = abap_true
+*  CHANGING
+*    ct_fieldcat                  = gt_fieldcat
+* EXCEPTIONS
+*   INCONSISTENT_INTERFACE       = 1
+*   PROGRAM_ERROR                = 2
+*   OTHERS                       = 3
+*          .
+*  IF sy-subrc <> 0.
+*   MESSAGE | Error : { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*
+*  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY_LVC'
+*   EXPORTING
+*     I_CALLBACK_PROGRAM                = sy-repid
+*     IS_LAYOUT_LVC                     = gs_layout
+*     IT_FIELDCAT_LVC                   = gt_fieldcat
+*    TABLES
+*      t_outtab                          = gt_scarr
+*   EXCEPTIONS
+*     PROGRAM_ERROR                     = 1
+*     OTHERS                            = 2
+*            .
+*  IF sy-subrc <> 0.
+*    MESSAGE | Error : { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*
+*  " sflight table
+*  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+* EXPORTING
+*   I_STRUCTURE_NAME             = 'SFLIGHT'
+*   I_CLIENT_NEVER_DISPLAY       = 'X'
+*   I_BYPASSING_BUFFER           = abap_true
+*  CHANGING
+*    ct_fieldcat                  = gt_fieldcat
+* EXCEPTIONS
+*   INCONSISTENT_INTERFACE       = 1
+*   PROGRAM_ERROR                = 2
+*   OTHERS                       = 3
+*          .
+*  IF sy-subrc <> 0.
+*   MESSAGE | Error : { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*
+*  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY_LVC'
+*   EXPORTING
+*     I_CALLBACK_PROGRAM                = sy-repid
+*     IS_LAYOUT_LVC                     = gs_layout
+*     IT_FIELDCAT_LVC                   = gt_fieldcat
+*    TABLES
+*      t_outtab                          = gt_sflg
+*   EXCEPTIONS
+*     PROGRAM_ERROR                     = 1
+*     OTHERS                            = 2
+*            .
+*  IF sy-subrc <> 0.
+*    MESSAGE | Error : { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*
+*  " spfli table
+*   CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+* EXPORTING
+*   I_STRUCTURE_NAME             = 'SPFLI'
+*   I_CLIENT_NEVER_DISPLAY       = 'X'
+*   I_BYPASSING_BUFFER           = abap_true
+*  CHANGING
+*    ct_fieldcat                  = gt_fieldcat
+* EXCEPTIONS
+*   INCONSISTENT_INTERFACE       = 1
+*   PROGRAM_ERROR                = 2
+*   OTHERS                       = 3
+*          .
+*  IF sy-subrc <> 0.
+*   MESSAGE | Error : { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*
+*  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY_LVC'
+*   EXPORTING
+*     I_CALLBACK_PROGRAM                = sy-repid
+*     IS_LAYOUT_LVC                     = gs_layout
+*     IT_FIELDCAT_LVC                   = gt_fieldcat
+*    TABLES
+*      t_outtab                          = gt_spfli
+*   EXCEPTIONS
+*     PROGRAM_ERROR                     = 1
+*     OTHERS                            = 2
+*            .
+*  IF sy-subrc <> 0.
+*    MESSAGE | Error : { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*ENDFORM.
+*
+*FORM layout .
+* gs_layout-zebra = abap_true.
+* gs_layout-cwidth_opt = abap_true.
+* gs_layout-doc_id = abap_true.
+* gs_layout-detailinit = abap_true.
+*ENDFORM.
+
+START-OF-SELECTION.
+PERFORM layout.
+PERFORM display.

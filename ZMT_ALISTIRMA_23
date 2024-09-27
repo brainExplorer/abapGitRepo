@@ -1,0 +1,64 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_23
+*&---------------------------------------------------------------------*
+*& Al##t#rma – 4: Yeni bir rapor olu#turun ve kullan#c#dan 3 adet parametre alin. (1 adet CARRID, 2 adet
+*& tarih). Parametrelerden gelen veriyi Type Range komutu kullanarak olu#turaca##n#z Select-Options
+*& yap#lar#na aktar#n. Elde etti#iniz Select-Options yap#lar#n# kullanarak SFLIGHT tablosundan uygun
+*& sat#rlar# okuyun ve ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_23.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME.
+PARAMETERS: p_cid   TYPE s_carr_id,
+            p_date1 TYPE s_date,
+            p_date2 TYPE s_date.
+SELECTION-SCREEN  END OF BLOCK b1.
+
+TYPES: BEGIN OF gty_carrid,
+         sign   TYPE c LENGTH 1,
+         option TYPE c LENGTH 2,
+         low    TYPE s_carr_id,
+         high   TYPE s_carr_id,
+       END OF gty_carrid.
+
+TYPES: BEGIN OF gty_date,
+         sign   TYPE c LENGTH 1,
+         option TYPE c LENGTH 2,
+         low    TYPE s_date,
+         high   TYPE s_date,
+       END OF gty_date.
+
+DATA: gs_so_cid  TYPE gty_carrid,
+      gs_so_date TYPE gty_date,
+      gt_so_cid  TYPE TABLE OF gty_carrid,
+      gt_so_date TYPE TABLE OF gty_date,
+      gs_sflight TYPE sflight,
+      gt_sflight TYPE TABLE OF sflight.
+
+START-OF-SELECTION.
+
+  gs_so_cid-sign = 'I'.
+  gs_so_cid-option = 'EQ'.
+  gs_so_cid-low    = p_cid.
+
+  APPEND gs_so_cid TO gt_so_cid.
+  CLEAR: gs_so_cid.
+
+  gs_so_date-sign = 'I'.
+  gs_so_date-option = 'BT'.
+  gs_so_date-low = p_date1.
+  gs_so_date-high = p_date2.
+
+  APPEND gs_so_date TO gt_so_date.
+  CLEAR: gs_so_date.
+
+  SELECT * FROM sflight INTO TABLE gt_sflight WHERE carrid IN gt_so_cid AND fldate IN gt_so_date.
+
+  LOOP AT gt_sflight INTO gs_sflight.
+    WRITE: / gs_sflight-carrid, gs_sflight-currency, gs_sflight-fldate, gs_sflight-paymentsum, gs_sflight-planetype.
+    SKIP.
+  ENDLOOP.
+
+  IF sy-subrc IS INITIAL.
+    MESSAGE 'Success' TYPE 'S'.
+  ENDIF.

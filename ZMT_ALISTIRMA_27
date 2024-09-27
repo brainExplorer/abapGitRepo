@@ -1,0 +1,64 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_27
+*&---------------------------------------------------------------------*
+*& Al##t#rma – 8: Yeni bir rapor olu#turun ve kullan#c#dan 3 adet parametre alin. (SPFLI tablosundaki
+*& COUNTRYFR tipinde). Parametrelerden al#nan COUNTRYFR bilgisini kullanarak SPFLI tablosundan
+*& sat#rlar# okuyun. Daha sonra For All Entries komutu yard#m#yla SFLIGHT tablosundan, SPFLI’den okunan
+*& tüm sat#rlar#n CARRID’si ile ayni CARRID’ye sahip olan sat#rlar# okuyun ve ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_27.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+PARAMETERS: p_cnt1 TYPE spfli-countryfr,
+            p_cnt2 TYPE spfli-countryfr,
+            p_cnt3 TYPE spfli-countryfr.
+SELECTION-SCREEN END OF BLOCK b1.
+
+START-OF-SELECTION.
+
+  DATA: gs_spfli   TYPE spfli,
+        gs_sflight TYPE sflight,
+        gt_spfli   TYPE TABLE OF spfli,
+        gt_sflight TYPE TABLE OF sflight.
+
+  " Fetch the records from SPFLI table
+  SELECT *
+    FROM spfli
+    WHERE countryfr IN ( @p_cnt1 , @p_cnt2, @p_cnt3 )
+    INTO TABLE @gt_spfli.
+
+  " Handle empty results
+  IF gt_spfli IS INITIAL.
+    MESSAGE | This spfli table doesn't contain any value. Please change value and try again.| TYPE 'I'.
+  ENDIF.
+
+  " Fetch related records from SFLIGHT table
+  IF gt_spfli IS NOT INITIAL.
+    SELECT *
+      FROM sflight
+      FOR ALL ENTRIES IN @gt_spfli
+      WHERE carrid = @gt_spfli-carrid
+      INTO TABLE @gt_sflight.
+  ENDIF.
+
+  " Check if the SELECT was successful
+  IF sy-subrc = 0.
+    " Display the SPFLI table
+    LOOP AT gt_spfli INTO gs_spfli.
+      WRITE: / gs_spfli-airpfrom, gs_spfli-airpto, gs_spfli-arrtime, gs_spfli-countryfr,
+               gs_spfli-cityfrom, gs_spfli-carrid, gs_spfli-distance, gs_spfli-distid.
+      SKIP.
+
+      " Display the SFLIGHT table
+      LOOP AT gt_sflight INTO gs_sflight WHERE connid = gs_spfli-connid AND carrid = gs_spfli-carrid.
+        WRITE: / gs_sflight-carrid, gs_sflight-connid, gs_sflight-currency, gs_sflight-fldate,
+                 gs_sflight-paymentsum, gs_sflight-planetype, gs_sflight-price, gs_sflight-seatsmax,
+                 gs_sflight-seatsmax_b, gs_sflight-seatsmax_f, gs_sflight-seatsocc, gs_sflight-seatsocc_b,
+                 gs_sflight-seatsocc_f.
+        SKIP.
+      ENDLOOP.
+      SKIP.
+      ULINE.
+      CLEAR: gs_sflight, gs_spfli.
+    ENDLOOP.
+  ENDIF.

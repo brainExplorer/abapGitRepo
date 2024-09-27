@@ -1,0 +1,15 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_36
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 16: Yeni bir fonksiyon yaz#n. Bir adet CARRID als#n. Gelen CARRID bilgisine göre SCARR
+*tablosunu okusun ve kullan#c#ya bir internal tablo versin. Fonksiyonu yeni yazaca##n#z bir raporda
+*kullan#n. Gelen sat#rlar# ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_36.
+
+INCLUDE ZMT_ALISTIRMA_36_TOP.
+INCLUDE ZMT_ALISTIRMA_36_FORM.
+
+START-OF-SELECTION.
+
+PERFORM display.

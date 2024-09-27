@@ -1,0 +1,168 @@
+*&---------------------------------------------------------------------*
+*& Report ZMC_RAPOR_144
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmc_rapor_144.
+
+
+INCLUDE zmc_rapor_143_top.
+*INCLUDE zmc_rapor_143_f01.
+
+START-OF-SELECTION.
+
+  PERFORM get_data.
+  PERFORM fcat.
+  PERFORM layout.
+  PERFORM alv.
+
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_data .
+  SELECT * FROM zmc_stravelag_2
+    INTO TABLE gt_stravelag
+    WHERE agencynum IN so_agncy.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  FCAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM fcat .
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+    EXPORTING
+      i_structure_name       = 'ZMC_STRAVELAG_2'
+      i_bypassing_buffer     = abap_true
+    CHANGING
+      ct_fieldcat            = gt_fcat
+    EXCEPTIONS
+      inconsistent_interface = 1
+      program_error          = 2
+      OTHERS                 = 3.
+
+  IF sy-subrc IS NOT INITIAL.
+    BREAK-POINT.
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  LAYOUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM layout .
+  gs_layout-zebra      = abap_true.
+  gs_layout-cwidth_opt = abap_true.
+  gs_layout-sel_mode   = 'A'.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM alv .
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY_LVC'
+    EXPORTING
+      i_callback_program       = sy-repid
+      i_callback_pf_status_set = 'PF_STATUS_144'
+      i_callback_user_command  = 'UC_144'
+      is_layout_lvc            = gs_layout
+      it_fieldcat_lvc          = gt_fcat
+    TABLES
+      t_outtab                 = gt_stravelag
+    EXCEPTIONS
+      program_error            = 1
+      OTHERS                   = 2.
+
+  IF sy-subrc IS NOT INITIAL.
+    BREAK-POINT.
+  ENDIF.
+
+ENDFORM.
+
+FORM pf_status_144 USING lt_extab TYPE slis_t_extab.
+  SET PF-STATUS 'PF_STATUS_144'.
+ENDFORM.
+
+FORM uc_144 USING lv_ucomm    TYPE sy-ucomm
+                  ls_selfield TYPE slis_selfield.
+
+  DATA : lv_msg           TYPE c LENGTH 80,
+         lv_sayac         TYPE n LENGTH 3,
+         lv_city          TYPE city,
+         lt_secilen_sat#r TYPE TABLE OF zmc_stravelag_2,
+         lt_fieldcat_slis TYPE slis_t_fieldcat_alv.
+
+  CASE lv_ucomm.
+    WHEN 'LEAVE'.
+      LEAVE PROGRAM.
+    WHEN 'SATIR'.
+      DESCRIBE TABLE gt_stravelag LINES gv_sat_sayisi.
+      SHIFT gv_sat_sayisi LEFT DELETING LEADING '0'.
+      CONCATENATE TEXT-002 gv_sat_sayisi INTO lv_msg SEPARATED BY space.
+      MESSAGE lv_msg TYPE 'I'.
+    WHEN 'SEHIR'.
+      SORT gt_stravelag BY city.
+      LOOP AT gt_stravelag INTO gs_stravelag.
+
+        IF sy-tabix > 1 AND gs_stravelag-city = lv_city.
+          CONTINUE.
+        ENDIF.
+
+        lv_city  = gs_stravelag-city.
+        lv_sayac = lv_sayac + 1.
+
+      ENDLOOP.
+      SHIFT lv_sayac LEFT DELETING LEADING '0'.
+      CONCATENATE TEXT-003 lv_sayac INTO lv_msg SEPARATED BY space.
+      MESSAGE lv_msg TYPE 'I'.
+    WHEN 'GORME'.
+      READ TABLE gt_stravelag INTO gs_stravelag INDEX ls_selfield-tabindex.
+      IF sy-subrc IS INITIAL. " EQ 0.
+        APPEND gs_stravelag TO lt_secilen_sat#r.
+      ENDIF.
+
+      CALL FUNCTION 'REUSE_ALV_FIELDCATALOG_MERGE'
+        EXPORTING
+          i_structure_name       = 'ZMC_STRAVELAG_2'
+          i_bypassing_buffer     = abap_true
+        CHANGING
+          ct_fieldcat            = lt_fieldcat_slis
+        EXCEPTIONS
+          inconsistent_interface = 1
+          program_error          = 2
+          OTHERS                 = 3.
+
+      CALL FUNCTION 'REUSE_ALV_POPUP_TO_SELECT'
+        EXPORTING
+          i_title               = 'Seçili Sat#r Verileri'
+          i_screen_start_column = 10
+          i_screen_start_line   = 10
+          i_screen_end_column   = 165
+          i_screen_end_line     = 7
+          i_tabname             = 'LT_SECILEN_SAT#R'
+          it_fieldcat           = lt_fieldcat_slis
+          i_callback_program    = sy-repid
+        TABLES
+          t_outtab              = lt_secilen_sat#r
+        EXCEPTIONS
+          program_error         = 1
+          OTHERS                = 2.
+
+  ENDCASE.
+
+ENDFORM.
