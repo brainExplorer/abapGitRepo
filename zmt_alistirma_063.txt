@@ -1,0 +1,96 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_063
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 5: Yeni bir rapor olu#turun ve kullan#c#dan 2 adet tarih al#n. Bu iki tarih hücresi yan yana
+*olsun. Gelen iki tarih aras#ndaki gün say#s#n# hesaplay#n ve secim ekran#ndan ç#kmadan, secim
+*ekran#ndaki üçüncü hücre içerisinde gösterin. Secim ekran#ndaki dördüncü hücre içerisinde ise
+*kullan#c#n#n girdi#i iki tarihin ortas#ndaki tarihi yaz#n. Üçüncü ve dördüncü hücreler yan yana olsunlar
+*ve bos olduklar#nda görünmez olsunlar.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_063.
+
+TABLES: sscrfields.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001 NO INTERVALS.
+ SELECTION-SCREEN BEGIN OF LINE.
+
+" Primary date
+  SELECTION-SCREEN COMMENT 1(7) TEXT-002.
+    SELECTION-SCREEN POSITION 8.
+      PARAMETERS: p_date1 TYPE sy-datum.
+
+" Secondary date
+ SELECTION-SCREEN COMMENT 22(11) TEXT-003.
+   SELECTION-SCREEN POSITION 33.
+    PARAMETERS: p_date2 TYPE sy-datum.
+
+  SELECTION-SCREEN PUSHBUTTON 45(54) calc USER-COMMAND cmd1.
+
+ SELECTION-SCREEN END OF LINE.
+SELECTION-SCREEN END OF BLOCK b1.
+
+" Result field
+SELECTION-SCREEN BEGIN OF BLOCK b2 WITH FRAME TITLE TEXT-004 NO INTERVALS.
+ SELECTION-SCREEN BEGIN OF LINE.
+   " Difference of two dates
+   SELECTION-SCREEN COMMENT 1(7) TEXT-005.
+    SELECTION-SCREEN POSITION 8.
+      PARAMETERS: p_diff TYPE int4.
+
+ " Middle date of between 2 dates.
+ SELECTION-SCREEN COMMENT 22(8) TEXT-006.
+   SELECTION-SCREEN POSITION 30.
+    PARAMETERS: p_date3 TYPE sy-datum.
+
+
+
+ SELECTION-SCREEN END OF LINE.
+SELECTION-SCREEN END OF BLOCK b2.
+
+*The INITIALIZATION event occurs before the selection screen is displayed,
+*allowing you to set default values or perform initial setup for input fields.
+INITIALIZATION.
+CALL FUNCTION 'ICON_CREATE'
+  EXPORTING
+   name                       = icon_calculation
+   TEXT                        = text-007
+   INFO                        = text-008
+ IMPORTING
+   RESULT                      = calc
+ EXCEPTIONS
+   ICON_NOT_FOUND              = 1
+   OUTPUTFIELD_TOO_SHORT       = 2
+   OTHERS                      = 3
+          .
+IF sy-subrc <> 0.
+ MESSAGE text-009 TYPE 'I' DISPLAY LIKE 'E'.
+ENDIF.
+
+*The AT SELECTION-SCREEN OUTPUT event occurs after the screen layout is processed
+*but before it’s displayed. It’s commonly used to dynamically modify
+*the appearance of the selection screen, such as enabling/disabling fields,
+* hiding/showing fields, or setting text labels.
+AT SELECTION-SCREEN OUTPUT.
+  LOOP AT SCREEN.
+   IF p_diff IS INITIAL.
+     IF screen-name eq 'P_DIFF' OR screen-name eq 'P_DATE3'.
+       screen-active = '0'.
+       MODIFY SCREEN.
+     ENDIF.
+     ELSE.
+       IF screen-name eq 'P_DIFF' OR screen-name eq 'P_DATE3'.
+         screen-input = '0'.
+         MODIFY SCREEN.
+       ENDIF.
+   ENDIF.
+  ENDLOOP.
+
+" This is used for input validation and handling user actions on the screen.
+  AT SELECTION-SCREEN.
+      CLEAR: p_diff, p_date3.
+
+      CASE sscrfields-ucomm.
+        WHEN 'CMD1'.
+          p_diff = p_date2 - p_date1.
+          p_date3 = p_date1 + ( p_diff / 2 ).
+      ENDCASE.

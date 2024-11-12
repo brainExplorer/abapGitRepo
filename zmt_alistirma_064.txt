@@ -1,0 +1,201 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_064
+*&---------------------------------------------------------------------*
+*& Al##t#rma – 6: Yeni bir rapor olu#turun ve kullan#c#dan 1 adet CARRID,
+*& 1 adet CONNID al#n. Rapor içerisinde bu parametrelerin dropdown olarak
+*& gösterilebilmesini sa#lay#n. Ayr#ca ekranda SPFLI tablosunun her bir hücresi
+*& için bir parametre tan#mlay#n. Bu parametreler yan yana, kullan#c#n#n veri
+*& giri#i yapmas#na kapal# olacak #ekilde ve içerisinde veri yoksa görünmez
+*& olacak #ekilde düzenlensin. Gelen veriye göre SPFLI tablosundan ilgili sat#r#
+*& okuyun ve gelen satirin hücrelerini seçim ekran#ndaki hücrelerin içine
+*& kaydederek görünür hale getirin.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_064.
+TABLES: sscrfields, zmt_scarr.
+
+DATA: gt_screen_names TYPE TABLE OF screen-name,
+      gv_found        TYPE i,
+      gt_carrid       TYPE TABLE OF spfli-carrid,
+      gs_carrid       TYPE spfli-carrid,
+      gt_connid       TYPE TABLE OF spfli-connid WITH EMPTY KEY,
+      gs_connid       TYPE spfli-connid.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001 NO INTERVALS.
+SELECTION-SCREEN BEGIN OF LINE.
+
+" Primary parameter for CARRID
+SELECTION-SCREEN COMMENT 1(11) TEXT-002.
+SELECTION-SCREEN POSITION 12.
+PARAMETERS: p_cid TYPE s_carr_id AS LISTBOX VISIBLE LENGTH 10.
+
+" Secondary parameter for CONNID
+SELECTION-SCREEN COMMENT 24(16) TEXT-003.
+SELECTION-SCREEN POSITION 40.
+PARAMETERS: p_con TYPE s_conn_id VISIBLE LENGTH 6 AS LISTBOX.
+
+SELECTION-SCREEN PUSHBUTTON 48(14) hsp USER-COMMAND cmd1.
+
+SELECTION-SCREEN END OF LINE.
+SELECTION-SCREEN END OF BLOCK b1.
+
+SELECTION-SCREEN BEGIN OF BLOCK b2.
+
+SELECTION-SCREEN BEGIN OF LINE.
+
+SELECTION-SCREEN POSITION 1.
+PARAMETERS: pcid TYPE s_carrid.
+
+SELECTION-SCREEN POSITION 4.
+PARAMETERS: pcoid TYPE s_conn_id.
+
+SELECTION-SCREEN POSITION 9.
+PARAMETERS: pcofr TYPE land1.
+
+SELECTION-SCREEN POSITION 12.
+PARAMETERS: pcfr TYPE s_from_cit.
+
+SELECTION-SCREEN POSITION 33.
+PARAMETERS: pafr TYPE s_fromairp.
+
+SELECTION-SCREEN POSITION 37.
+PARAMETERS: pcoto TYPE land1.
+
+SELECTION-SCREEN POSITION 41.
+PARAMETERS: pcto TYPE s_to_city.
+
+SELECTION-SCREEN END OF LINE.
+
+" Second line
+SELECTION-SCREEN BEGIN OF LINE.
+
+SELECTION-SCREEN POSITION 1.
+PARAMETERS: pato TYPE s_toairp.
+
+SELECTION-SCREEN POSITION 5.
+PARAMETERS: pftime TYPE s_fltime.
+
+SELECTION-SCREEN POSITION 12.
+PARAMETERS: pdtime TYPE s_dep_time.
+
+SELECTION-SCREEN POSITION 21.
+PARAMETERS: patime TYPE s_arr_time.
+
+SELECTION-SCREEN POSITION 30.
+PARAMETERS: pdist TYPE s_distance.
+
+SELECTION-SCREEN POSITION 42.
+PARAMETERS: pdistid TYPE s_distid.
+
+SELECTION-SCREEN POSITION 46.
+PARAMETERS: pfltype TYPE s_fltype.
+
+SELECTION-SCREEN POSITION 48.
+PARAMETERS: pperiod TYPE s_period.
+
+SELECTION-SCREEN END OF LINE.
+SELECTION-SCREEN END OF BLOCK b2.
+
+INITIALIZATION.
+*@5A@ is the code for the calculator icon in SAP. You can replace it with any other SAP icon code as needed.
+*@42@ for the display icon
+*@4A@ for a checkmark
+  hsp = '@5A@ Select'.
+  PERFORM dropdown.
+
+AT SELECTION-SCREEN OUTPUT.
+  LOOP AT SCREEN.
+    " Control visibility of SPFLI parameters based on CARRID and CONNID input
+    IF screen-name = 'PCID' OR screen-name = 'PCOID' OR screen-name = 'PCOFR' OR screen-name = 'PCFR' OR
+       screen-name = 'PAFR' OR screen-name = 'PCOTO' OR screen-name = 'PCTO' OR screen-name = 'PATO' OR
+       screen-name = 'PFTIME' OR screen-name = 'PDTIME' OR screen-name = 'PATIME' OR screen-name = 'PDIST' OR
+       screen-name = 'PDISTID' OR screen-name = 'PFLTYPE' OR screen-name = 'PPERIOD'.
+
+      IF p_cid IS NOT INITIAL AND p_con IS NOT INITIAL.
+        screen-active = '1'.
+        screen-input = '0'.  " Make fields read-only
+      ELSE.
+        screen-active = '0'.  " Hide fields if CARRID or CONNID are empty
+      ENDIF.
+    ENDIF.
+    MODIFY SCREEN.
+  ENDLOOP.
+
+AT SELECTION-SCREEN.
+  CASE sscrfields-ucomm.
+    WHEN 'CMD1'.
+      PERFORM handle_cmd1.
+  ENDCASE.
+
+*&---------------------------------------------------------------------*
+*&      Form  DROPDOWN
+*&---------------------------------------------------------------------*
+FORM dropdown.
+  " Populate dropdown for CARRID, CONNID
+  DATA: lv_fname  TYPE vrm_id,
+        lv_fname1 TYPE vrm_id,
+        lt_carrid TYPE vrm_values,
+        ls_carrid TYPE vrm_value,
+        lt_connid TYPE vrm_values,
+        ls_connid TYPE vrm_value.
+  lv_fname = 'P_CID'.
+  lv_fname1 = 'P_CON'.
+  SELECT DISTINCT carrid INTO TABLE gt_carrid FROM spfli.
+  LOOP AT gt_carrid INTO gs_carrid.
+    ls_carrid-key = gs_carrid.
+    ls_carrid-text = gs_carrid.
+    APPEND ls_carrid TO lt_carrid.
+    CLEAR: ls_carrid.
+  ENDLOOP.
+  IF sy-subrc = 0.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = lv_fname
+        values = lt_carrid.
+  ENDIF.
+
+  SELECT DISTINCT connid FROM spfli INTO TABLE gt_connid.
+  LOOP AT gt_connid INTO gs_connid.
+    ls_connid-key = gs_connid.
+    ls_connid-text = gs_connid.
+    APPEND ls_connid TO lt_connid.
+    CLEAR: ls_connid.
+  ENDLOOP.
+
+  IF sy-subrc = 0.
+    CALL FUNCTION 'VRM_SET_VALUES'
+      EXPORTING
+        id     = lv_fname1
+        values = lt_connid.
+  ENDIF.
+
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  HANDLE_CMD1
+*&---------------------------------------------------------------------*
+FORM handle_cmd1.
+  DATA: ls_spflii TYPE spfli.
+  " Read the SPFLI table based on selected values
+  SELECT SINGLE *
+    INTO ls_spflii
+    FROM spfli
+    WHERE carrid = p_cid
+    AND connid = p_con.
+
+  pcid        = ls_spflii-carrid.
+  pcoid       = ls_spflii-connid.
+  pcofr       = ls_spflii-countryfr.
+  pcfr        = ls_spflii-cityfrom.
+  pafr        = ls_spflii-airpfrom.
+  pcoto       = ls_spflii-countryto.
+  pcto        = ls_spflii-cityto.
+  pato        = ls_spflii-airpto.
+  pftime      = ls_spflii-fltime.
+  pdtime      = ls_spflii-deptime.
+  patime      = ls_spflii-arrtime.
+  pdist       = ls_spflii-distance.
+  pdistid     = ls_spflii-distid.
+  pfltype     = ls_spflii-fltype.
+  pperiod     = ls_spflii-period.
+
+ENDFORM.

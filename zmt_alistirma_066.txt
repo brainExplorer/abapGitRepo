@@ -1,0 +1,237 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_066
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 8: ZCM_TABLO_1 ve ZCM_TABLO_2 tablosuna yeni veriler ekleyin. Yeni eklenen sat#rlar#n
+*&baz#lar#n#n ID hücresi ayni baz#lar#n#nki ise farkl# olsun. JOIN komutuyla her iki tablodan veri çekin. Elde
+*&etti#iniz internal tabloyu Container ALV olarak ekranda gösterin. Ekranda ayr#ca 2 Container ALV daha
+*&olsun. Bu 2 Container ALV’den birincisinde ZCM_TABLO_1 database tablosunda olan ancak JOIN
+*&komutundan dolay# ilk olu#turulan ALV’de gösterilemeyen sat#rlar yer als#n. Ayni #ekilde ALV’den
+*&ikincisinde de ZCM_TABLO_2 database tablosunda olan ancak JOIN komutundan dolay# ilk olu#turulan
+*&ALV’de gösterilemeyen sat#rlar yer als#n. (Sonradan olu#turulan 2 ALV’de, her iki tabloda birbirine
+*&kar##l#k gelmeyen sat#rlar yer alacakt#r.) Ekranda yeni bir buton olu#turun. Bu butona bas#ld###nda izin
+*&kulland### halde çal##an listesinde kayd# olmayan ki#iler hakk#nda kullan#c#y# bilgilendirin.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_066.
+
+INCLUDE zmt_alistirma_066_top.
+
+START-OF-SELECTION.
+
+  CALL SCREEN 0100.
+
+MODULE status_0100 OUTPUT.
+  SET PF-STATUS 'STATUS303'.
+  SET TITLEBAR 'TITLE303'.
+  PERFORM create_containers.
+ENDMODULE.
+
+MODULE user_command_0100 INPUT.
+  CASE sy-ucomm.
+    WHEN 'LEAVE'.
+      SET SCREEN 0.
+  ENDCASE.
+ENDMODULE.
+
+FORM create_containers.
+  PERFORM create_first_container.
+  PERFORM create_second_container.
+  PERFORM create_third_container.
+ENDFORM.
+
+* First container: Shows joined data from ZCM_TABLO_1 and ZCM_TABLO_2
+FORM create_first_container.
+  PERFORM get_first_data.
+  PERFORM set_first_layo.
+  PERFORM set_first_fcat.
+  PERFORM display_first.
+ENDFORM.
+
+* Second container: Shows unmatched data from ZCM_TABLO_1
+FORM create_second_container.
+  PERFORM get_second_data.
+  PERFORM set_second_layo.
+  PERFORM set_second_fcat.
+  PERFORM display_second.
+ENDFORM.
+
+* Third container: Shows unmatched data from ZCM_TABLO_2
+FORM create_third_container.
+  PERFORM get_third_data.
+  PERFORM set_third_layo.
+  PERFORM set_third_fcat.
+  PERFORM display_third.
+ENDFORM.
+
+FORM get_first_data.
+ SELECT * FROM zmt_tbl_303_0
+ INTO TABLE gt_tbl_0
+ WHERE id NOT IN ( SELECT id FROM zmt_tbl_303_1 ).
+
+ENDFORM.
+
+* Layout settings for the first ALV container
+FORM set_first_layo.
+  gs_first_layo-zebra = 'X'.
+  gs_first_layo-cwidth_opt = 'X'.
+  gs_first_layo-sel_mode = 'A'.
+ENDFORM.
+
+* Field catalog for the first ALV container
+FORM set_first_fcat.
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+    EXPORTING
+      i_structure_name = 'ZMT_TBL_303_0'
+    CHANGING
+      ct_fieldcat      = gt_first_fcat
+    EXCEPTIONS
+      OTHERS           = 3.
+  IF sy-subrc <> 0.
+    MESSAGE |Error in setting field catalog| TYPE 'E'.
+  ENDIF.
+ENDFORM.
+
+* Display function for the first ALV container
+FORM display_first.
+  IF go_alv_0 IS INITIAL.
+    CREATE OBJECT go_cont_0
+      EXPORTING
+        container_name = 'CC_FIRST'.
+    CREATE OBJECT go_alv_0
+      EXPORTING
+        i_parent = go_cont_0.
+
+    go_alv_0->set_table_for_first_display(
+      EXPORTING
+        i_structure_name = 'ZMT_TBL_303_0'
+        is_layout = gs_first_layo
+      CHANGING
+        it_outtab = gt_tbl_0
+        it_fieldcatalog = gt_first_fcat
+    ).
+  ENDIF.
+  go_alv_0->refresh_table_display(
+  EXCEPTIONS
+    finished       = 1
+    OTHERS         = 2
+).
+  IF sy-subrc <> 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+               WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+ENDFORM.
+
+* Form to get data for unmatched rows from ZCM_TABLO_0
+FORM get_second_data.
+  SELECT * FROM zmt_tbl_303_1
+    INTO TABLE gt_tbl_1
+    WHERE id NOT IN ( SELECT id FROM zmt_tbl_303_0 ).
+
+ENDFORM.
+
+* Layout settings for the second ALV container
+FORM set_second_layo.
+  gs_second_layo-zebra = 'X'.
+  gs_second_layo-cwidth_opt = 'X'.
+  gs_second_layo-sel_mode = 'A'.
+ENDFORM.
+
+* Field catalog for the second ALV container
+FORM set_second_fcat.
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+    EXPORTING
+      i_structure_name = 'ZMT_TBL_303_1'
+    CHANGING
+      ct_fieldcat      = gt_second_fcat
+    EXCEPTIONS
+      OTHERS           = 3.
+  IF sy-subrc <> 0.
+    MESSAGE |Error in setting field catalog for second container| TYPE 'E'.
+  ENDIF.
+ENDFORM.
+
+* Display function for the second ALV container
+FORM display_second.
+  IF go_alv_1 IS INITIAL.
+    CREATE OBJECT go_cont_1
+      EXPORTING
+        container_name = 'CC_SECOND'.
+    CREATE OBJECT go_alv_1
+      EXPORTING
+        i_parent = go_cont_1.
+
+    go_alv_1->set_table_for_first_display(
+      EXPORTING
+        i_structure_name = 'ZMT_TBL_303_1'
+        is_layout = gs_second_layo
+      CHANGING
+        it_outtab = gt_tbl_1
+        it_fieldcatalog = gt_second_fcat
+    ).
+  ENDIF.
+  go_alv_1->refresh_table_display(
+  EXCEPTIONS
+    finished       = 1
+    OTHERS         = 2
+).
+  IF sy-subrc <> 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+               WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+ENDFORM.
+
+FORM get_third_data.
+  CLEAR: gt_tbl_0.
+  SELECT * FROM zmt_tbl_303_0 AS tbl1
+  INNER JOIN zmt_tbl_303_1 AS tbl2
+  ON tbl1~id = tbl2~id
+  INTO CORRESPONDING FIELDS OF TABLE gt_tbl_0.
+ENDFORM.
+
+* Layout settings for the third ALV container
+FORM set_third_layo.
+  gs_third_layo-zebra = 'X'.
+  gs_third_layo-cwidth_opt = 'X'.
+  gs_third_layo-sel_mode = 'A'.
+ENDFORM.
+
+* Field catalog for the third ALV container
+FORM set_third_fcat.
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+    EXPORTING
+      i_structure_name = 'ZMT_TBL_303_0'
+    CHANGING
+      ct_fieldcat      = gt_third_fcat
+    EXCEPTIONS
+      OTHERS           = 3.
+  IF sy-subrc <> 0.
+    MESSAGE |Error in setting field catalog for third container| TYPE 'E'.
+  ENDIF.
+ENDFORM.
+
+* Display function for the third ALV container
+FORM display_third.
+  CREATE OBJECT go_cont_2
+    EXPORTING
+      container_name = 'CC_INT'.
+  CREATE OBJECT go_alv_2
+    EXPORTING
+      i_parent = go_cont_2.
+
+  go_alv_2->set_table_for_first_display(
+    EXPORTING
+      i_structure_name = 'ZMT_TBL_303_0'
+      is_layout = gs_third_layo
+    CHANGING
+      it_outtab = gt_tbl_0
+      it_fieldcatalog = gt_third_fcat
+  ).
+  go_alv_1->refresh_table_display(
+    EXCEPTIONS
+      finished       = 1
+      OTHERS         = 2
+  ).
+  IF sy-subrc <> 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+               WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+ENDFORM.
