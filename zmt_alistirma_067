@@ -1,0 +1,13 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_067
+*&---------------------------------------------------------------------*
+*& Yeni bir Message Class tan#mlay#n ve içerisinde senelik izin program#nda yap#lan
+*& i#lemlerin sonucunda kullan#labilecek #ekilde mesajlar olu#turun ve raporu (ayni zamanda class
+*& objesinin) ilgili yerlerinde kullan#n.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_067.
+
+
+*MESSAGE e001(zmt_furloughmsgcls).
+*MESSAGE i000(zmt_furloughmsgcls).
+MESSAGE s000(zmt_furloughmsgcls) DISPLAY LIKE 'S'.

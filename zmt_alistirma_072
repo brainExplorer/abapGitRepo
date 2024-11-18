@@ -1,0 +1,33 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_072
+*&---------------------------------------------------------------------*
+*& Al##t#rma – 6: Yeni bir rapor olu#turun ve SFLIGHT tablosunun bütün sat#rlar#n# okuyup internal tablo
+*& içine kaydedin. TYPE ANY TABLE komutu yard#m#yla yeni bir field sembol olu#turun ve field sembolü
+*& kullanarak loop edin. #stedi#iniz herhangi 3 kolonu ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT ZMT_ALISTIRMA_072.
+
+DATA: gt_sflight TYPE TABLE OF sflight.
+
+FIELD-SYMBOLS: <fs_sflight> TYPE ANY TABLE,
+               <fs_str>     TYPE ANY.
+
+START-OF-SELECTION.
+
+select * from sflight INTO TABLE gt_sflight.
+
+ASSIGN gt_sflight to <fs_sflight>.
+
+LOOP AT gt_sflight ASSIGNING FIELD-SYMBOL(<fs_line>).
+
+  ASSIGN COMPONENT 'PRICE' OF STRUCTURE <fs_line> TO <fs_str>.
+  WRITE: / <fs_str>.
+  ASSIGN COMPONENT 'CURRENCY' OF STRUCTURE <fs_line> TO <fs_str>.
+  WRITE: / <fs_str>.
+  ASSIGN COMPONENT 'PLANETYPE' OF STRUCTURE <fs_line> TO <fs_str>.
+  WRITE: / <fs_str>.
+
+  SKIP.
+  ULINE.
+
+ENDLOOP.

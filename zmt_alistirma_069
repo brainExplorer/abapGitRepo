@@ -1,0 +1,42 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_069
+*&---------------------------------------------------------------------*
+*& Al##t#rma – 3: Yeni bir rapor olu#turun. #çinde C, N, D, T, I, P ve String tipinde 7 farkl# de#i#ken
+*& tan#mlay#n. Ayr#ca her bir de#i#ken için ayni tipte birer tane field sembol tan#mlay#n. De#i#kenleri ilgili
+*& field sembollere assign edin ve ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_069.
+
+DATA: gv_c TYPE c VALUE 'A',          " Single character
+      gv_n TYPE n VALUE 124,       " Numeric text (can only contain digits)
+      gv_d TYPE d VALUE '20241118',   " Date in YYYYMMDD format
+      gv_t TYPE t VALUE '123456',     " Time in HHMMSS format
+      gv_i TYPE i VALUE 12345,        " Integer
+      gv_p TYPE p DECIMALS 1 VALUE '1234.5', " Packed number with 1 decimal place
+      gv_s TYPE string VALUE 'Hello ABAP'.   " String value
+
+START-OF-SELECTION.
+
+FIELD-SYMBOLS: <fs_c> type  c,
+               <fs_n> type  n,
+               <fs_d> type  d,
+               <fs_t> type  t,
+               <fs_i> type  i,
+               <fs_p> type  p,
+               <fs_s> type  string.
+
+ASSIGN gv_c to <fs_c> .
+ASSIGN gv_n to <fs_n> .
+ASSIGN gv_d to <fs_d> .
+ASSIGN gv_t to <fs_t> .
+ASSIGN gv_i to <fs_i> .
+ASSIGN gv_p to <fs_p> .
+ASSIGN gv_s to <fs_s> .
+
+WRITE: / 'Field Symbol <fs_c>:', <fs_c>,
+       / 'Field Symbol <fs_n>:', <fs_n>,
+       / 'Field Symbol <fs_d>:', <fs_d>,
+       / 'Field Symbol <fs_t>:', <fs_t>,
+       / 'Field Symbol <fs_i>:', <fs_i>,
+       / 'Field Symbol <fs_p>:', <fs_p>,
+       / 'Field Symbol <fs_s>:', <fs_s>.

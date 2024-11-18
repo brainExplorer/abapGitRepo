@@ -1,0 +1,70 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_068
+*&---------------------------------------------------------------------*
+*& Al##t#rma – 2: Yeni bir rapor olu#turun. Raporda 2 adet radiobutton 2 adet secim ekran# olsun. Birinci
+*& radiobutton seçilirse birinci seçim ekran# görünür hale gelsin. #kinci radiobutton seçilirse ikinci seçim
+*& ekran# görünür hale gelsin. Birinci secim ekran# kendinize ait STRAVELAG tablosundaki ilgili satirin
+*& #irket ismini de#i#tirebilmek için kullan#c#dan ID ve yeni isim als#n. #kinci secim ekran# ise ayni tablodaki
+*& ilgili satirin adres hücresini (STREET kolonu) de#i#tirebilmek için kullan#c#dan ID ve yeni adres als#n.
+*& Secim ekran#ndan gelen veriye göre rapor içinde ilgili program# SUBMIT WITH komutu yard#m#yla
+*& ça##r#n ve AND RETURN komutu ile geri dönün.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_068.
+
+DATA: gs_stravelag TYPE zmt_stravelag.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-000 NO INTERVALS.
+PARAMETERS: p_rad1 RADIOBUTTON GROUP c USER-COMMAND cmd1 DEFAULT 'X',
+            p_rad2 RADIOBUTTON GROUP c.
+SELECTION-SCREEN END OF BLOCK b1.
+
+
+SELECTION-SCREEN BEGIN OF BLOCK b2 WITH FRAME NO INTERVALS.
+PARAMETERS: p_id   TYPE zmt_stravelag-agencynum,
+            p_name TYPE zmt_stravelag-name.
+SELECTION-SCREEN END OF BLOCK b2.
+
+SELECTION-SCREEN BEGIN OF BLOCK b3 WITH FRAME NO INTERVALS.
+PARAMETERS: p_nname TYPE zmt_stravelag-name MODIF ID sc1.
+SELECTION-SCREEN END OF BLOCK b3.
+
+SELECTION-SCREEN BEGIN OF BLOCK b4 WITH FRAME NO INTERVALS.
+PARAMETERS: p_street TYPE zmt_stravelag-street MODIF ID sc2.
+SELECTION-SCREEN END OF BLOCK b4.
+
+AT SELECTION-SCREEN OUTPUT.
+  LOOP AT SCREEN.
+    IF p_rad1 NE 'X' AND  screen-group1 = 'SC1'.
+      screen-active = '0'.
+      MODIFY SCREEN.
+    ELSEIF p_rad2 NE 'X' AND  screen-group1 = 'SC2'.
+      screen-active = '0'.
+      MODIFY SCREEN.
+    ENDIF.
+  ENDLOOP.
+
+START-OF-SELECTION.
+
+  IF p_rad1 EQ 'X'.
+    SELECT * FROM zmt_stravelag
+      INTO gs_stravelag
+      WHERE agencynum EQ p_id
+      AND   name      EQ p_name.
+      ENDSELECT.
+      IF gs_stravelag IS NOT INITIAL.
+        gs_stravelag-name = p_nname.
+        MODIFY zmt_stravelag FROM gs_stravelag.
+      ENDIF.
+
+
+    ELSE.
+      SELECT * FROM zmt_stravelag
+        INTO gs_stravelag
+        WHERE agencynum EQ p_id
+        AND   name      EQ p_name.
+        ENDSELECT.
+        IF gs_stravelag IS NOT INITIAL.
+          gs_stravelag-street = p_street.
+          MODIFY zmt_stravelag FROM gs_stravelag.
+        ENDIF.
+    ENDIF.
