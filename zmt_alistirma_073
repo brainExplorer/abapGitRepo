@@ -1,0 +1,57 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_073
+*&---------------------------------------------------------------------*
+*& Al##t#rma – 7: Yeni bir rapor olu#turun. Raporda 3 adet radiobutton olsun. Rapor içinde STRAVELAG
+*& tablosunun tüm sat#rlar#n# okuyup internal tablo içine kaydedin. Kullan#c# ilk radiobuttonu seçerse
+*& tablonun ilk 3 kolonunu, ikinci radiobuttonu seçerse ilk 6 kolonunu, üçüncü radiobuttonu seçerse
+*& bütün kolonlar# ekrana yazd#r#n. Loop i#lemini field sembol kullanarak yap#n. Field sembol TYPE ANY
+*& TABLE komutu yard#m#yla tan#mlanm## olsun.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_073.
+
+PARAMETERS: p_rad1 RADIOBUTTON GROUP x DEFAULT 'X',
+            p_rad2 RADIOBUTTON GROUP x,
+            p_rad3 RADIOBUTTON GROUP x.
+
+DATA: gt_stravel TYPE TABLE OF stravelag,
+      gv_no      TYPE i VALUE 1.
+
+FIELD-SYMBOLS: <fs_table> TYPE ANY TABLE,
+               <fs_line>  TYPE any,
+               <fs_str>   TYPE any.
+
+
+START-OF-SELECTION.
+
+* STRAVELAG tablosunun tüm sat#rlar#n# al
+  SELECT *
+    FROM stravelag
+    INTO TABLE gt_stravel.
+
+* Field-symbol'e tabloyu ata
+  ASSIGN gt_stravel TO <fs_table>.
+
+  LOOP AT <fs_table> ASSIGNING <fs_line>.
+
+    DO.
+      ASSIGN COMPONENT gv_no OF STRUCTURE <fs_line> TO <fs_str>.
+
+      IF sy-subrc IS NOT INITIAL.
+        gv_no = 1.
+        EXIT.
+      ENDIF.
+
+      WRITE: <fs_str>.
+      ADD 1 TO gv_no.
+
+      IF p_rad1 EQ 'X' AND gv_no EQ 4.
+        gv_no = 1.
+        EXIT.
+      ELSEIF p_rad2 EQ 'X' AND gv_no EQ 7.
+        gv_no = 1.
+        EXIT.
+      ENDIF.
+    ENDDO.
+
+    SKIP.
+  ENDLOOP.
