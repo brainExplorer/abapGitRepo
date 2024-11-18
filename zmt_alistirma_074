@@ -1,0 +1,51 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_ALISTIRMA_074
+*&---------------------------------------------------------------------*
+*& Al##t#rma – 8: Yeni bir rapor olu#turun. Raporda 2 adet radiobutton olsun. Kullan#c# ilk radiobuttonu
+*& seçerse ZCM_TABLO_1, ikinci radiobuttonu seçerse ZCM_TABLO_2 tablosundaki bütün sat#rlar#n
+*& okuyup internal tablo içine kaydedin. Select komutunu sadece 1 kere kullan#lan. TYPE ANY TABLE
+*& komutu yard#m#yla bir field sembol tan#mlay#n ve internal tabloyu bu field sembole assign edin. Field
+*& sembol üzerinde loop ederek tüm kolonlar# ekrana yazd#r#n.
+*&---------------------------------------------------------------------*
+REPORT zmt_alistirma_074.
+
+PARAMETERS: p_r1 RADIOBUTTON GROUP x DEFAULT 'X',
+            p_r2 RADIOBUTTON GROUP x.
+
+DATA: gt_tab1     TYPE TABLE OF scarr,
+      gt_tab2     TYPE TABLE OF spfli,
+      gt_tabname  TYPE tabname,
+      lv_colcount TYPE i,
+      lv_index    TYPE i.
+
+FIELD-SYMBOLS: <fs_tab>   TYPE ANY TABLE,
+               <fs_line>  TYPE any,
+               <fs_value> TYPE any.
+
+START-OF-SELECTION.
+
+* Kullan#c# seçimine göre tabloyu ata
+  IF p_r1 EQ abap_true.
+    ASSIGN gt_tab1 TO <fs_tab>.
+    gt_tabname = 'SCARR'.
+  ELSE.
+    ASSIGN gt_tab2 TO <fs_tab>.
+    gt_tabname = 'SPFLI'.
+  ENDIF.
+
+* Dinamik SELECT i#lemi
+  SELECT * FROM (gt_tabname) INTO TABLE <fs_tab>.
+
+  LOOP AT <fs_tab> ASSIGNING <fs_line>.
+    DO.
+      ASSIGN COMPONENT sy-index OF STRUCTURE <fs_line> TO <fs_value>.
+      IF sy-subrc NE 0.
+        EXIT.
+      ENDIF.
+      WRITE: <fs_value>.
+    ENDDO.
+    SKIP.
+  ENDLOOP.
+
+* Field-symbol'ü serbest b#rak
+  UNASSIGN <fs_tab>.
