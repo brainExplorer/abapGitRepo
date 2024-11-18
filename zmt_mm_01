@@ -1,0 +1,40 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_MM_01
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmt_mm_01.
+DATA: gv_file_name TYPE string. "Variable to store the selected file name.
+TABLES: sscrfields.       "System structure to manage custom function keys on the selection screen.
+
+SELECTION-SCREEN FUNCTION KEY 1. "Define a custom function key (F1) for the selection screen.
+
+"Define a block on the selection screen with a frame and title.
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001 NO INTERVALS.
+PARAMETERS: p_file TYPE rlgrap-filename. "Parameter to allow the user to input/select a file path.
+SELECTION-SCREEN END OF BLOCK b1.       "End of the block definition.
+
+INITIALIZATION. "Event triggered before the selection screen is displayed.
+
+  "Combine the icon for a document and the text 'Download Template' into the function key text.
+  CONCATENATE icon_document 'Download Template' INTO sscrfields-functxt_01.
+
+"AT SELECTION-SCREEN Event for Value Request:
+"AT SELECTION-SCREEN triggers when the user interacts with the screen.
+"AT VALUE-REQUEST is used for F4 help on fields like p_file.
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_file.
+  CALL FUNCTION 'F4_FILENAME' "Call standard function module to open a file browser for file selection.
+    IMPORTING
+      file_name = p_file "Import the selected file path into the p_file parameter.
+    EXCEPTIONS
+      OTHERS    = 1. "Handle errors, if any, with a generic exception.
+
+  IF sy-subrc <> 0. "Check if the function call was successful (sy-subrc = 0 means no error).
+    MESSAGE 'Error selecting file' TYPE 'E'. "Show an error message if the file selection failed.
+  ENDIF.
+
+  "Store the selected file name in the global variable for further use.
+  gv_file_name = p_file.
+
+  "Display the selected file name in an information message for confirmation.
+  MESSAGE p_file TYPE 'I'.
