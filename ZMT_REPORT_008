@@ -1,0 +1,103 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_008
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 7: Yeni bir rapor olu#turun ve STRAVELAG tablosunun sadece AGENCYNUM, NAME, CITY,
+*COUNTRY, TELEPHONE ve URL kolonlar#n# çekerek bir internal tablo içine kaydedin. Internal tablonun
+*ALV’si görüntüleyebilmek için manuel olarak Field Catalog internal tablosu olu#turun ve ALV’yi ekranda
+*gösterin.
+*&---------------------------------------------------------------------*
+REPORT zmt_report_008.
+
+TYPES: BEGIN OF gty_stravelag,
+         agencynum  TYPE s_agncynum,
+         name       TYPE s_agncynam,
+         city       TYPE city,
+         country    TYPE s_country,
+         telephone  TYPE s_phoneno,
+         url        TYPE s_url,
+       END OF gty_stravelag.
+
+DATA: gs_travel   TYPE gty_stravelag,
+      gt_travel   TYPE TABLE OF gty_stravelag,
+      gs_layout   TYPE slis_layout_alv,
+      gt_fieldcat TYPE slis_t_fieldcat_alv,
+      gs_fieldcat TYPE slis_fieldcat_alv.
+
+START-OF-SELECTION.
+
+PERFORM get_elements.
+PERFORM manualycreatedfieldcattable.
+PERFORM layout.
+PERFORM display.
+
+
+FORM get_elements .
+*  * Select specified fields from STRAVELAG table
+*  SELECT agencynum
+*         name
+*         city
+*         country
+*         telephone
+*         url
+*    FROM stravelag
+*    INTO TABLE gt_travel.
+
+  SELECT * FROM stravelag INTO CORRESPONDING FIELDS OF TABLE gt_travel.
+
+  IF sy-subrc NE 0.
+    MESSAGE |Occurred an error while getting elements from the STRAVELAG table.| TYPE 'S' DISPLAY LIKE 'E'.
+    EXIT.
+  ENDIF.
+ENDFORM.
+
+FORM manualycreatedfieldcattable .
+* Manually create the field catalog
+  CLEAR gt_fieldcat.
+  gs_fieldcat-fieldname = 'AGENCYNUM'.
+  gs_fieldcat-seltext_m = 'Agency Number'.
+  APPEND gs_fieldcat TO gt_fieldcat.
+
+  gs_fieldcat-fieldname = 'NAME'.
+  gs_fieldcat-seltext_m = 'Name'.
+  APPEND gs_fieldcat TO gt_fieldcat.
+
+  gs_fieldcat-fieldname = 'CITY'.
+  gs_fieldcat-seltext_m = 'City'.
+  APPEND gs_fieldcat TO gt_fieldcat.
+
+  gs_fieldcat-fieldname = 'COUNTRY'.
+  gs_fieldcat-seltext_m = 'Country'.
+  APPEND gs_fieldcat TO gt_fieldcat.
+
+  gs_fieldcat-fieldname = 'TELEPHONE'.
+  gs_fieldcat-seltext_m = 'Telephone'.
+  APPEND gs_fieldcat TO gt_fieldcat.
+
+  gs_fieldcat-fieldname = 'URL'.
+  gs_fieldcat-seltext_m = 'URL'.
+  APPEND gs_fieldcat TO gt_fieldcat.
+ENDFORM.
+
+FORM layout .
+* Set layout options
+  gs_layout-zebra = 'X'.
+  gs_layout-colwidth_optimize = 'X'.
+ENDFORM.
+
+FORM display .
+* Display ALV grid
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program = sy-repid
+      is_layout          = gs_layout
+      it_fieldcat        = gt_fieldcat
+    TABLES
+      t_outtab           = gt_travel
+    EXCEPTIONS
+      program_error      = 1
+      OTHERS             = 2.
+
+  IF sy-subrc NE 0.
+    WRITE: 'An error occurred while displaying the ALV.'.
+  ENDIF.
+ENDFORM.

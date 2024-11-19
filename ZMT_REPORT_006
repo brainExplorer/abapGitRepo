@@ -1,0 +1,107 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_006
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 5: #kinci veya üçüncü al##t#rmada gösterdi#iniz ALV’nin URL kolonunu HOTSPOT haline
+*getirin. Üzerine t#kland###nda kullan#c#dan yeni bir URL als#n. Al#nan de#er ile db tablosunu güncelleyin
+*ve ALV’yi yeniden olu#turun.
+*&---------------------------------------------------------------------*
+REPORT zmt_report_006.
+
+TABLES: zmt_stravelag.
+
+DATA: gt_travel TYPE TABLE OF zmt_stravelag,
+      gs_travel TYPE zmt_stravelag,
+      gt_fieldcat TYPE slis_t_fieldcat_alv,
+      gs_fieldcat TYPE slis_fieldcat_alv,
+      gs_layout TYPE slis_layout_alv,
+      gv_new_url TYPE S_URL.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1.
+  SELECT-OPTIONS: so_agnum FOR zmt_stravelag-agencynum.
+SELECTION-SCREEN END OF BLOCK b1.
+
+START-OF-SELECTION.
+
+  PERFORM travel.
+  PERFORM fcat.
+  PERFORM layout.
+  PERFORM display.
+
+FORM travel.
+  SELECT * FROM stravelag INTO TABLE gt_travel WHERE agencynum IN so_agnum.
+ENDFORM.
+
+FORM MT_USER_COMMAND USING lv_ucomm TYPE sy-ucomm
+                            ls_selfield TYPE slis_selfield.
+
+  CASE lv_ucomm.
+    WHEN '&IC1'.
+      IF ls_selfield-fieldname = 'URL'.
+        " Get the current URL value from the selected row
+        READ TABLE gt_travel INTO gs_travel INDEX ls_selfield-tabindex.
+        IF sy-subrc = 0.
+          " Call the function module to get the new URL
+          CALL FUNCTION 'ZMT_FM_04'
+            IMPORTING
+              EV_URL = gv_new_url.
+
+          " Update the URL field in the internal table
+          gs_travel-url = gv_new_url.
+          MODIFY gt_travel FROM gs_travel INDEX ls_selfield-tabindex.
+
+          " Update the database table with the modified internal table
+          MODIFY zmt_stravelag FROM gs_travel.
+
+          " Refresh the display
+          PERFORM display.
+        ENDIF.
+      ENDIF.
+
+  ENDCASE.
+
+ENDFORM.
+
+FORM fcat.
+  CALL FUNCTION 'REUSE_ALV_FIELDCATALOG_MERGE'
+    EXPORTING
+      i_program_name   = sy-repid
+      i_structure_name = 'zmt_stravelag'
+      i_bypassing_buffer = abap_true
+    CHANGING
+      ct_fieldcat = gt_fieldcat
+    EXCEPTIONS
+      inconsistent_interface = 1
+      program_error = 2
+      OTHERS = 3.
+
+  LOOP AT gt_fieldcat INTO gs_fieldcat.
+    CASE gs_fieldcat-fieldname.
+      WHEN 'URL'.
+        gs_fieldcat-hotspot = 'X'.
+        MODIFY gt_fieldcat FROM gs_fieldcat TRANSPORTING hotspot WHERE fieldname = gs_fieldcat-fieldname.
+    ENDCASE.
+  ENDLOOP.
+ENDFORM.
+
+
+FORM layout.
+  gs_layout-zebra = abap_true.
+  gs_layout-colwidth_optimize = abap_true.
+ENDFORM.
+
+FORM display .
+    CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program = sy-repid
+      is_layout = gs_layout
+      it_fieldcat = gt_fieldcat
+      i_callback_user_command  = 'MT_USER_COMMAND'
+    TABLES
+      t_outtab = gt_travel
+    EXCEPTIONS
+      program_error = 1
+      OTHERS = 2.
+    IF sy-subrc <> 0.
+      MESSAGE 'Error' TYPE 'S' DISPLAY LIKE 'E'.
+    ENDIF.
+ENDFORM.

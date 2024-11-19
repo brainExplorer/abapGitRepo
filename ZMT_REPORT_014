@@ -1,0 +1,155 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_015
+*&---------------------------------------------------------------------*
+*& Offset usage, interval and comparison operators
+*&---------------------------------------------------------------------*
+REPORT zmt_report_015.
+
+INCLUDE zmt_report_015_data.
+
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_REPORT_015_DATA
+**&---------------------------------------------------------------------*
+*DATA: gv_date TYPE datum,
+*      gt_spfli TYPE TABLE OF spfli,
+*      lv_month_name TYPE char20,
+*      lv_connid TYPE spfli-connid.
+
+
+START-OF-SELECTION.
+
+*PERFORM date.
+*PERFORM intervals.
+PERFORM comparison.
+
+
+*&---------------------------------------------------------------------*
+*&      Form  DATE
+*&---------------------------------------------------------------------*
+FORM date .
+
+  gv_date = sy-datum.
+
+*  SELECT SINGLE ltx INTO lv_month_name: This line selects the month name (text) from table T247
+*  based on the language (sy-langu) and the month number (gv_date+4(2)).
+*  T247 Table: This table stores the names of months (text) in different languages (spras).
+*  The field mnr corresponds to the numeric month (e.g., "01" for January).
+*  sy-langu: This system variable represents the language code (e.g., "EN" for English, "TR" for Turkish).
+  SELECT SINGLE ltx
+    INTO lv_month_name  FROM t247
+    WHERE spras = sy-langu
+    AND mnr = gv_date+4(2).
+
+  MESSAGE | Day: { gv_date+6(2) } - Month: { lv_month_name } - Year: { gv_date+0(4) } | TYPE 'I'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  INTERVALS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM intervals .
+  " Creates for intervals sample
+
+
+SELECT * FROM spfli INTO TABLE gt_spfli.
+
+* Loop through the entries to assign a number to each CONNID using the number range
+  LOOP AT gt_spfli INTO DATA(ls_spfli).
+    CALL FUNCTION 'NUMBER_GET_NEXT'
+      EXPORTING
+        nr_range_nr                   = '01'
+        object                        = 'zmt_rng_01'
+      IMPORTING
+        number                        = lv_connid
+      EXCEPTIONS
+        interval_not_found            = 1
+        number_range_not_intern       = 2
+        object_not_found              = 3
+        quantity_is_0                 = 4
+        quantity_is_not_1             = 5
+        interval_overflow             = 6
+        buffer_overflow               = 7
+        OTHERS                        = 8.
+    IF sy-subrc = 0.
+      ls_spfli-connid = lv_connid.
+    ELSE.
+      BREAK-POINT.
+    ENDIF.
+
+    MODIFY gt_spfli FROM ls_spfli.
+
+    MESSAGE | Ranged month = { lv_connid } | TYPE 'I'.
+  ENDLOOP.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  COMPARISON
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM comparison .
+  DATA: lv_number1     TYPE c LENGTH 2 VALUE '10',
+        lv_number2     TYPE c LENGTH 3 VALUE '20A',
+        lv_text1       TYPE string VALUE 'ABC',
+        lv_text2       TYPE string VALUE 'DEF2',
+        lv_date1       TYPE datum VALUE '20230901',
+        lv_date2       TYPE datum VALUE '2023093.',
+        lv_result      TYPE string.
+  IF lv_number1 CO '0123456789'.
+    WRITE |CO thats true for { lv_number1 } |.
+  ELSE.
+    WRITE |CO thats false for { lv_number1 } |.
+  ENDIF.
+
+  SKIP.
+  ULINE.
+  SKIP.
+
+  IF lv_number2 CO '0123456789'.
+    WRITE |CO thats true for { lv_number2 } |.
+  ELSE.
+    WRITE |CO thats false for { lv_number2 } |.
+  ENDIF.
+
+  SKIP.
+  ULINE.
+  SKIP.
+
+  IF lv_number1 CN '0123456789'.
+    WRITE |CN thats true for { lv_number1 } |.
+  ELSE.
+    WRITE |CN thats false for { lv_number1 } |.
+  ENDIF.
+
+  SKIP.
+  ULINE.
+  SKIP.
+
+  IF lv_number2 CN '0123456789'.
+    WRITE |CN thats true for { lv_number2 } |.
+  ELSE.
+    WRITE |CN thats false for { lv_number2 } |.
+  ENDIF.
+
+
+  SKIP.
+  ULINE.
+  SKIP.
+
+  IF lv_text1 CA 'abc'.
+    WRITE |CA thats true for { lv_text1 } |.
+  ELSE.
+    WRITE |CA thats false for { lv_text1 } |.
+  ENDIF.
+
+  SKIP.
+  ULINE.
+  SKIP.
+
+  IF lv_text1 CA 'ABCDX'.
+    WRITE |CA thats true for { lv_text1 } |.
+  ELSE.
+    WRITE |CA thats false for { lv_text1 } |.
+  ENDIF.
+
+ENDFORM.

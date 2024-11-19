@@ -1,0 +1,205 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_009
+*&---------------------------------------------------------------------*
+*& Al##t#rma – 8: Kullan#c#dan 1 adet CARRID al#n, SCARR tablosunu okuyun ve
+*& ALV’de gösterin. CARRID kolonu HOTSPOT olsun. T#kland###nda SPFLI tablosunda
+*& ayn# CARRID verisine sahip sat#rlar#n ALV’si küçük bir pencerede gösterilsin.
+*& Bu ALV’nin de CARRID kolonu HOTSPOT olsun ve t#kland###nda SFLIGHT tablosunda
+*& ayn# CARRID verisine sahip sat#rlar#n ALV’si gösterilsin.
+*&---------------------------------------------------------------------*
+
+REPORT zmt_report_009.
+
+INCLUDE zmt_report_009_top.
+INCLUDE zmt_report_009_forms.
+
+START-OF-SELECTION.
+
+  PERFORM select_data.
+  PERFORM fcat.
+  PERFORM layout.
+  PERFORM display.
+
+*  *&---------------------------------------------------------------------*
+**&  Include           ZMT_REPORT_009_TOP
+**&---------------------------------------------------------------------*
+*SELECTION-SCREEN BEGIN OF BLOCK b1.
+*  PARAMETERS: p_carrid TYPE s_carrid.
+*SELECTION-SCREEN END OF BLOCK b1.
+*
+*DATA : gt_scarr         TYPE TABLE OF scarr,
+*       gt_spfli         TYPE TABLE OF spfli,
+*       gt_sflight       TYPE TABLE OF sflight,
+*       gt_fcat_scarr    TYPE lvc_t_fcat,
+*       gt_fcat_spfli    TYPE lvc_t_fcat,
+*       gt_fcat_sflight  TYPE lvc_t_fcat,
+*       gs_fcat_scarr    TYPE lvc_s_fcat,
+*       gs_fcat_spfli    TYPE lvc_s_fcat,
+*       gs_fcat_sflight  TYPE lvc_s_fcat,
+*       gs_layout        TYPE lvc_s_layo.
+
+
+
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_REPORT_009_FORMS
+**&---------------------------------------------------------------------*
+*
+*FORM select_data .
+*  SELECT * FROM scarr INTO TABLE gt_scarr where carrid eq p_carrid.
+*ENDFORM.
+*
+*FORM fcat .
+*
+*  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+*    EXPORTING
+*      i_structure_name       = 'SCARR'
+*      i_bypassing_buffer     = abap_true
+*    CHANGING
+*      ct_fieldcat            = gt_fcat_scarr
+*    EXCEPTIONS
+*      inconsistent_interface = 1
+*      program_error          = 2
+*      OTHERS                 = 3.
+*
+*  IF sy-subrc IS NOT INITIAL.
+*    LEAVE PROGRAM.
+*  ENDIF.
+*
+*  LOOP AT gt_fcat_scarr INTO gs_fcat_scarr.
+*    CASE gs_fcat_scarr-fieldname.
+*      WHEN 'CARRID'.
+*        gs_fcat_scarr-hotspot = abap_true.
+*        MODIFY gt_fcat_scarr FROM gs_fcat_scarr TRANSPORTING hotspot WHERE fieldname = gs_fcat_scarr-fieldname.
+*    ENDCASE.
+*  ENDLOOP.
+*
+*  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+*    EXPORTING
+*      i_structure_name       = 'SPFLI'
+*      i_bypassing_buffer     = abap_true
+*    CHANGING
+*      ct_fieldcat            = gt_fcat_spfli
+*    EXCEPTIONS
+*      inconsistent_interface = 1
+*      program_error          = 2
+*      OTHERS                 = 3.
+*
+*  IF sy-subrc IS NOT INITIAL.
+*    LEAVE PROGRAM.
+*  ENDIF.
+*
+*  LOOP AT gt_fcat_spfli INTO gs_fcat_spfli.
+*    CASE gs_fcat_spfli-fieldname.
+*      WHEN 'CARRID'.
+*        gs_fcat_spfli-hotspot = abap_true.
+*        MODIFY gt_fcat_spfli FROM gs_fcat_spfli TRANSPORTING hotspot WHERE fieldname = gs_fcat_spfli-fieldname.
+*    ENDCASE.
+*  ENDLOOP.
+*
+*  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+*    EXPORTING
+*      i_structure_name       = 'SFLIGHT'
+*      i_bypassing_buffer     = abap_true
+*    CHANGING
+*      ct_fieldcat            = gt_fcat_sflight
+*    EXCEPTIONS
+*      inconsistent_interface = 1
+*      program_error          = 2
+*      OTHERS                 = 3.
+*
+*  IF sy-subrc IS NOT INITIAL.
+*    LEAVE PROGRAM.
+*  ENDIF.
+*
+*
+*ENDFORM.
+*
+*FORM layout .
+*
+*  gs_layout-zebra      = abap_true.
+*  gs_layout-cwidth_opt = abap_true.
+*  gs_layout-sel_mode   = 'A'.
+*
+*ENDFORM.
+*
+*FORM display .
+*
+*  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY_LVC'
+*    EXPORTING
+*      i_callback_program      = sy-repid
+*      i_callback_user_command = 'UC_46'
+*      is_layout_lvc           = gs_layout
+*      it_fieldcat_lvc         = gt_fcat_scarr
+*    TABLES
+*      t_outtab                = gt_scarr
+*    EXCEPTIONS
+*      program_error           = 1
+*      OTHERS                  = 2.
+*  IF sy-subrc IS NOT INITIAL.
+*    LEAVE PROGRAM.
+*  ENDIF.
+*
+*ENDFORM.
+*
+*FORM uc_46 USING lv_ucomm TYPE sy-ucomm
+*                 ls_selfield TYPE slis_selfield.
+*
+*  CASE lv_ucomm.
+*    WHEN '&IC1'.
+*      IF ls_selfield-fieldname = 'CARRID'.
+*        SELECT * FROM spfli INTO TABLE gt_spfli WHERE carrid = ls_selfield-value.
+*
+*        CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY_LVC'
+*          EXPORTING
+*            i_callback_program      = sy-repid
+*            i_callback_user_command = 'UC_SPFLI'
+*            is_layout_lvc           = gs_layout
+*            it_fieldcat_lvc         = gt_fcat_spfli
+*            i_screen_start_column   = 4
+*            i_screen_start_line     = 10
+*            i_screen_end_column     = 110
+*            i_screen_end_line       = 20
+*          TABLES
+*            t_outtab                = gt_spfli
+*          EXCEPTIONS
+*            program_error           = 1
+*            OTHERS                  = 2.
+*        IF sy-subrc IS NOT INITIAL.
+*          LEAVE PROGRAM.
+*        ENDIF.
+*     ENDIF.
+*  ENDCASE.
+*
+*ENDFORM.
+*
+*FORM uc_spfli USING lv_ucomm TYPE sy-ucomm
+*                    ls_selfield TYPE slis_selfield.
+*
+*  CASE lv_ucomm.
+*    WHEN '&IC1'.
+*      IF ls_selfield-fieldname = 'CARRID'.
+*
+*        SELECT * FROM sflight INTO TABLE gt_sflight WHERE carrid = ls_selfield-value.
+*
+*        CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY_LVC'
+*          EXPORTING
+*            i_callback_program    = sy-repid
+*            is_layout_lvc         = gs_layout
+*            it_fieldcat_lvc       = gt_fcat_sflight
+*            i_screen_start_column = 4
+*            i_screen_start_line   = 10
+*            i_screen_end_column   = 110
+*            i_screen_end_line     = 20
+*          TABLES
+*            t_outtab              = gt_sflight
+*          EXCEPTIONS
+*            program_error         = 1
+*            OTHERS                = 2.
+*        IF sy-subrc IS NOT INITIAL.
+*          LEAVE PROGRAM.
+*        ENDIF.
+*
+*
+*      ENDIF.
+*  ENDCASE.
+*ENDFORM.

@@ -1,0 +1,174 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_013
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmt_report_013.
+
+TABLES: zmc_employee.
+
+DATA: gv_id       TYPE zmc_de_id,
+      gv_name     TYPE zmc_de_name,
+      gv_surname  TYPE zmc_de_sname,
+      gv_holidays TYPE zmc_de_hldys,
+      gt_employee TYPE TABLE OF zmc_employee,
+      gs_employee TYPE zmc_employee.
+
+START-OF-SELECTION.
+
+  CALL SCREEN 0100.
+
+MODULE status_0100 OUTPUT.
+  SET PF-STATUS 'PF_STATUS_0100'.
+  SET TITLEBAR 'EMPLOYEE SCREEN'.
+
+  PERFORM get_data.
+ENDMODULE.
+
+MODULE user_command_0100 INPUT.
+  CASE sy-ucomm.
+    WHEN 'LEAVE'.
+      LEAVE PROGRAM.
+
+    WHEN 'CREATE'.
+      " Check if all necessary fields are filled
+      IF gv_id IS NOT INITIAL AND
+         gv_name IS NOT INITIAL AND
+         gv_surname IS NOT INITIAL AND
+         gv_holidays IS NOT INITIAL.
+
+        " Try to read the table zmc_employee with the given key
+        READ TABLE gt_employee WITH KEY id = gv_id INTO gs_employee.
+
+        " If the ID does not exist, proceed with creation
+        IF sy-subrc <> 0.
+          gs_employee-id = gv_id.
+          gs_employee-name = gv_name.
+          gs_employee-surname = gv_surname.
+          gs_employee-holidays = gv_holidays.
+
+          " Append the new entry to the internal table
+          APPEND gs_employee TO gt_employee.
+
+          " Optional: Insert the new entry into the database table
+          INSERT zmc_employee FROM gs_employee.
+
+          " Commit the work if database changes are made
+          COMMIT WORK.
+
+          MESSAGE 'Employee created successfully.' TYPE 'S'.
+
+        ELSE.
+          MESSAGE |You entered an existing value. This ID corresponds to the following: { gs_employee-name } - { gs_employee-surname } - { gs_employee-holidays }| TYPE 'I'.
+        ENDIF.
+      ELSE.
+        MESSAGE 'Please fill all fields correctly.' TYPE 'E'.
+      ENDIF.
+      PERFORM clear.
+
+    WHEN 'READ'.
+      IF gv_id IS NOT INITIAL.
+
+        READ TABLE gt_employee WITH KEY id = gv_id INTO gs_employee.
+
+        IF sy-subrc eq 0.
+
+         gv_name = gs_employee-name.
+         gv_surname = gs_employee-surname.
+         gv_holidays = gs_employee-holidays.
+
+         CLEAR gs_employee.
+        ELSE.
+          MESSAGE | There is no saved record with given id.| TYPE 'S' DISPLAY LIKE 'E'.
+          PERFORM clear.
+        ENDIF.
+
+        ELSE.
+          MESSAGE | Please write the id field.| TYPE 'S' DISPLAY LIKE 'E'.
+          PERFORM clear.
+      ENDIF.
+
+
+    WHEN 'UPDATE'.
+      " Check if all necessary fields are filled
+      IF gv_id IS NOT INITIAL AND
+         gv_name IS NOT INITIAL AND
+         gv_surname IS NOT INITIAL AND
+         gv_holidays IS NOT INITIAL.
+
+        " Try to read the internal table gt_employee with the given key
+        READ TABLE gt_employee WITH KEY id = gv_id INTO gs_employee.
+
+        " If the ID exists, proceed with the update
+        IF sy-subrc = 0.
+          " Update the fields in the work area
+          gs_employee-name = gv_name.
+          gs_employee-surname = gv_surname.
+          gs_employee-holidays = gv_holidays.
+
+          " Update the entry in the internal table
+          MODIFY gt_employee FROM gs_employee INDEX sy-tabix.
+
+          " Update the entry in the database table
+          UPDATE zmc_employee FROM gs_employee.
+
+          IF sy-subrc = 0.
+            MESSAGE 'Employee updated successfully.' TYPE 'S'.
+          ELSE.
+            MESSAGE 'An error occurred while updating.' TYPE 'S' DISPLAY LIKE 'E'.
+          ENDIF.
+
+        ELSE.
+          MESSAGE 'An error occurred while reading. Please enter a valid ID.' TYPE 'S' DISPLAY LIKE 'E'.
+        ENDIF.
+
+        PERFORM clear.
+
+      ELSE.
+        MESSAGE 'Please fill all fields correctly.' TYPE 'E'.
+      ENDIF.
+
+
+    WHEN 'DELETE'.
+    " Check if the ID field is filled
+    IF gv_id IS NOT INITIAL.
+
+      " Try to read the table with the given key
+      READ TABLE gt_employee WITH KEY id = gv_id INTO gs_employee.
+
+      " If the ID exists, proceed with deletion
+      IF sy-subrc = 0.
+
+        " Delete the entry from the internal table
+        DELETE gt_employee WHERE id = gv_id.
+
+        " Delete the entry from the database table
+        DELETE FROM zmc_employee WHERE id = gv_id.
+
+        " Commit the work to apply the deletion in the database
+        COMMIT WORK.
+
+        MESSAGE 'Employee deleted successfully.' TYPE 'S'.
+
+        PERFORM clear.
+
+      ELSE.
+        MESSAGE 'Employee ID does not exist.' TYPE 'E'.
+      ENDIF.
+    ELSE.
+      MESSAGE 'Please provide an Employee ID to delete.' TYPE 'E'.
+    ENDIF.
+
+  ENDCASE.
+ENDMODULE.
+
+FORM get_data .
+  " Only select data if the internal table is empty
+  IF lines( gt_employee ) EQ 0.
+    SELECT * FROM zmc_employee INTO TABLE gt_employee.
+  ENDIF.
+ENDFORM.
+
+FORM clear .
+  CLEAR: gv_id, gv_name, gv_name, gv_surname, gv_holidays, gs_employee.
+ENDFORM.

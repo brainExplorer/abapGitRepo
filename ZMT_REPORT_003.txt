@@ -1,0 +1,75 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_003
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 2: Yeni bir rapor olu#turun. Select-Options komutu kullanarak kullan#c#dan “AGENCYNUM”
+*&al#n. (Bu kolonu STRAVELAG database tablosu içinde bulabilirsiniz). Gelen veriye göre ilk al##t#rmada
+*&olu#turdu#unuz ve içinde kay#t olu#turdu#unuz database tablosundan ilgili sat#rlar# okuyun ve olu#an
+*&internal tablonun ALV’sini al#n. (Birinci fonksiyon kombinasyonunu kullanarak). Program#n#z# Perform
+*&komutu kullanarak yaz#n.
+*&---------------------------------------------------------------------*
+REPORT zmt_report_003.
+
+TABLES: stravelag.
+
+DATA: gt_travel TYPE TABLE OF stravelag,
+      gs_travel TYPE stravelag,
+      gt_fieldcat TYPE slis_t_fieldcat_alv,
+      gs_fieldcat TYPE slis_fieldcat_alv,
+      gs_layout TYPE slis_layout_alv.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1.
+  SELECT-OPTIONS: so_agnum FOR stravelag-agencynum.
+SELECTION-SCREEN END OF BLOCK b1.
+
+START-OF-SELECTION.
+
+PERFORM travel.
+PERFORM fcat.
+PERFORM layout.
+
+FORM travel .
+  SELECT * FROM stravelag INTO TABLE gt_travel WHERE agencynum IN so_agnum.
+ENDFORM.
+
+FORM fcat .
+  CALL FUNCTION 'REUSE_ALV_FIELDCATALOG_MERGE'
+    EXPORTING
+      i_program_name   = sy-repid
+      i_structure_name = 'STRAVELAG'
+      i_bypassing_buffer = abap_true
+    CHANGING
+      ct_fieldcat = gt_fieldcat
+    EXCEPTIONS
+      inconsistent_interface = 1
+      program_error = 2
+      OTHERS = 3.
+
+  LOOP AT gt_fieldcat INTO gs_fieldcat.
+    CASE gs_fieldcat-fieldname.
+      WHEN 'URL'.
+        gs_fieldcat-hotspot = 'X'.
+        MODIFY gt_fieldcat FROM gs_fieldcat TRANSPORTING hotspot WHERE fieldname = gs_fieldcat-fieldname.
+    ENDCASE.
+  ENDLOOP.
+ENDFORM.
+
+FORM layout .
+
+  gs_layout-zebra = abap_true.
+  gs_layout-colwidth_optimize = abap_true.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program = sy-repid
+      is_layout = gs_layout
+      it_fieldcat = gt_fieldcat
+    TABLES
+      t_outtab = gt_travel
+    EXCEPTIONS
+      program_error = 1
+      OTHERS = 2.
+  IF sy-subrc <> 0.
+    MESSAGE 'error' TYPE 'S' DISPLAY LIKE 'E'.
+  ENDIF.
+
+ENDFORM.

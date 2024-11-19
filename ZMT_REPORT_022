@@ -1,0 +1,226 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_028
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZMT_REPORT_028.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME NO INTERVALS.
+  PARAMETERS: p_agnum TYPE s_agncynum OBLIGATORY,
+              p_name  TYPE string LOWER CASE.
+SELECTION-SCREEN END OF BLOCK b1.
+
+DATA: gs_log_info       TYPE bal_s_log,
+      gs_bal_log        TYPE bal_s_msg,
+      gv_log_handle     TYPE balloghndl,
+      gv_timestamp      TYPE tzntstmps,
+      gv_number_of_char TYPE i.
+
+CONSTANTS: gc_object     TYPE balobj_d  VALUE 'ZMT_OBJ',
+           gc_sub_object TYPE balsubobj VALUE 'ZMT_SUB'.
+
+
+START-OF-SELECTION.
+
+PERFORM prep_log.
+PERFORM first_log.
+PERFORM check_id.
+PERFORM check_name.
+PERFORM update.
+PERFORM save_log.
+
+" Preparing stage to date and time info for log record
+FORM prep_log .
+
+  CONVERT DATE sy-datum TIME sy-uzeit INTO TIME STAMP gv_timestamp TIME ZONE sy-zonlo.
+
+  gs_log_info-object     = gc_object.
+  gs_log_info-subobject  = gc_sub_object.
+  gs_log_info-extnumber  = gv_timestamp.
+
+  CONDENSE gs_log_info-extnumber.
+
+  " We keep record for 2 weeks and then it will be deleted.
+
+  CALL FUNCTION 'ADD_TIME_TO_DATE'
+    EXPORTING
+      i_idate                     = sy-datum
+      i_time                      = 2
+      i_iprkz                     = '1'
+   IMPORTING
+     O_IDATE                     = gs_log_info-aldate_del
+   EXCEPTIONS
+     INVALID_PERIOD              = 1
+     INVALID_ROUND_UP_RULE       = 2
+     INTERNAL_ERROR              = 3
+     OTHERS                      = 4.
+  IF sy-subrc <> 0.
+    MESSAGE e005(zmt_msgclss_01) WITH sy-subrc sy-cdate.
+    LEAVE PROGRAM.
+  ENDIF.
+
+  " Creation of sequence identifier
+  CALL FUNCTION 'BAL_LOG_CREATE'
+    EXPORTING
+      i_s_log                      = gs_log_info
+   IMPORTING
+     E_LOG_HANDLE                  = gv_log_handle
+   EXCEPTIONS
+     LOG_HEADER_INCONSISTENT       = 1
+     OTHERS                        = 2
+            .
+  IF sy-subrc <> 0.
+    MESSAGE e006(ZMT_MSGCLSS_01) WITH sy-subrc sy-cdate.
+    LEAVE PROGRAM.
+  ENDIF.
+
+
+ENDFORM.
+
+FORM first_log .
+
+  gs_bal_log-msgty = 'S'.
+  gs_bal_log-msgid = 'ZMT_MSGCLSS_01'.
+  gs_bal_log-msgno = 12.
+  gs_bal_log-msgv1 = sy-datum.
+  gs_bal_log-msgv2 = sy-uzeit.
+  gs_bal_log-msgv3 = sy-uname.
+
+  PERFORM add_log.
+
+  gs_bal_log-msgty = 'S'.
+  gs_bal_log-msgid = 'ZMT_MSGCLSS_01'.
+  gs_bal_log-msgno = 13.
+  gs_bal_log-msgv1 = p_agnum.
+  gs_bal_log-msgv2 = p_name.
+
+  PERFORM add_log.
+
+ENDFORM.
+
+FORM check_id .
+  SELECT SINGLE * FROM zmt_stravelag
+    INTO @DATA(gs_stravel)
+    WHERE agencynum = @p_agnum.
+
+    IF gs_stravel IS INITIAL.
+      gs_bal_log-msgty = 'E'.
+      gs_bal_log-msgid = 'ZMT_MSGCLSS_01'.
+      gs_bal_log-msgno = 14.
+      gs_bal_log-msgv1 = p_agnum.
+
+      PERFORM add_log.
+
+      " Save added logs.
+      PERFORM save_log.
+      LEAVE PROGRAM.
+    ELSE.
+
+      gs_bal_log-msgty = 'S'.
+      gs_bal_log-msgid = 'ZMT_MSGCLSS_01'.
+      gs_bal_log-msgno = 15.
+      gs_bal_log-msgv1 = p_agnum.
+      PERFORM add_log.
+    ENDIF.
+
+ENDFORM.
+
+FORM check_name .
+  IF p_name IS INITIAL.
+      gs_bal_log-msgty = 'E'.
+      gs_bal_log-msgid = 'ZMT_MSGCLSS_01'.
+      gs_bal_log-msgno = 16.
+
+      PERFORM add_log.
+      PERFORM save_log.
+      LEAVE PROGRAM.
+  ELSE.
+    gs_bal_log-msgty = 'S'.
+    gs_bal_log-msgid = 'ZMT_MSGCLSS_01'.
+    gs_bal_log-msgno = 17.
+
+    "add log record
+    PERFORM add_log.
+  ENDIF.
+
+  gv_number_of_char = strlen( p_name ).
+
+  IF gv_number_of_char GT 25.
+      gs_bal_log-msgty = 'E'.
+      gs_bal_log-msgid = 'ZMT_MSGCLSS_01'.
+      gs_bal_log-msgno = 18.
+      gs_bal_log-msgv2 = p_name.
+
+    "add log record
+      PERFORM add_log.
+
+    " Save the added log and leave program
+    PERFORM save_log.
+    LEAVE PROGRAM.
+    ELSE.
+      gs_bal_log-msgty = 'S'.
+      gs_bal_log-msgid = 'ZMT_MSGCLSS_01'.
+      gs_bal_log-msgno = 19.
+      gs_bal_log-msgv2 = p_name.
+
+      " add log record
+      PERFORM add_log.
+  ENDIF.
+
+ENDFORM.
+
+FORM update .
+  UPDATE zmt_stravelag SET   name        = p_name
+                       WHERE agencynum   = p_agnum.
+
+  IF sy-subrc IS NOT INITIAL.
+      gs_bal_log-msgty = 'E'.
+      gs_bal_log-msgid = 'ZMT_MSGCLSS_01'.
+      gs_bal_log-msgno = 20.
+
+      PERFORM add_log.
+      PERFORM save_log.
+      LEAVE PROGRAM.
+  ELSE.
+      gs_bal_log-msgty = 'S'.
+      gs_bal_log-msgid = 'ZMT_MSGCLSS_01'.
+      gs_bal_log-msgno = 21.
+      PERFORM add_log.
+  ENDIF.
+ENDFORM.
+
+FORM add_log .
+  CALL FUNCTION 'BAL_LOG_MSG_ADD'
+    EXPORTING
+     I_LOG_HANDLE              = gv_log_handle
+      i_s_msg                  = gs_bal_log
+   EXCEPTIONS
+     LOG_NOT_FOUND             = 1
+     MSG_INCONSISTENT          = 2
+     LOG_IS_FULL               = 3
+     OTHERS                    = 4.
+
+  IF sy-subrc <> 0.
+    MESSAGE e007(ZMT_MSGCLSS_01) WITH sy-subrc sy-cdate.
+    LEAVE PROGRAM.
+  ENDIF.
+
+  CLEAR: gs_bal_log.
+ENDFORM.
+
+FORM save_log .
+  CALL FUNCTION 'BAL_DB_SAVE'
+   EXPORTING
+     I_SAVE_ALL                 = abap_true
+   EXCEPTIONS
+     LOG_NOT_FOUND              = 1
+     SAVE_NOT_ALLOWED           = 2
+     NUMBERING_ERROR            = 3
+     OTHERS                     = 4
+            .
+  IF sy-subrc <> 0.
+    MESSAGE e008(ZMT_MSGCLSS_01) WITH sy-subrc sy-cdate.
+    LEAVE PROGRAM.
+  ENDIF.
+
+ENDFORM.

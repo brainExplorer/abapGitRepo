@@ -1,0 +1,133 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_011
+*&---------------------------------------------------------------------*
+*&Al##t#rma – 10: Yeni bir database tablosu olu#turun. (Örne#in ZCM_SPFLI) Satir yap#s# SPFLI database
+*tablosu ile tamamen ayni olsun. Daha sonra yeni bir rapor olu#turun ve SPFLI tablosundaki bütün
+*bilgileri okuyup olu#turdu#unuz yeni database tablosu içine kaydedin. Olu#turdu#unuz ve içini
+*doldurdu#unuz tablodaki bütün sat#rlar# okuyup ALV’sini gösterin. Tamamen kendinize ait veya kopya
+*PF_Status kullanarak 2 yeni buton olu#turun. #lk butona bas#ld###nda CITYFROM ve CITYTO kolonlar#
+*de#i#tirilebilir (editable) hale gelsin. Daha sonra hücreler içerisinde yap#lan de#i#iklikleri kullanarak
+*kendinize ait database tablosunu güncelleyin. (#pucu: Kullan#c#n#n, ALV hücresinde de#i#iklik yapt#ktan
+*sonra ba#ka bir hücre üzerine çift t#klamas# gerekmektedir. Aksi halde yap#lan de#i#iklik SAP taraf#ndan
+*tamamlanm## kabul edilmiyor. Kullan#c#dan bu do#rultuda bir teyit almak mant#kl# olacakt#r.)
+*&---------------------------------------------------------------------*
+REPORT zmt_report_011.
+
+TABLES: zmt_spfli.
+
+INCLUDE zmt_report_011_top.
+INCLUDE zmt_report_011_forms.
+
+START-OF-SELECTION.
+
+PERFORM get_items.
+PERFORM fieldcat.
+PERFORM layout.
+PERFORM display.
+
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_REPORT_011_TOP
+**&---------------------------------------------------------------------*
+*DATA: gt_spfli    TYPE TABLE OF zmt_spfli,
+*      gs_spfli    TYPE zmt_spfli,
+*      gt_fieldcat TYPE slis_t_fieldcat_alv,
+*      gs_layout   TYPE slis_layout_alv.
+
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_REPORT_011_FORMS
+**&---------------------------------------------------------------------*
+*
+*FORM get_items .
+*  SELECT * FROM zmt_spfli INTO  TABLE gt_spfli.
+*  IF lines( gt_spfli ) EQ 0.
+*    SELECT *  FROM spfli INTO TABLE gt_spfli.
+*    IF sy-subrc EQ 0.
+*      LOOP AT gt_spfli INTO gs_spfli.
+*         INSERT zmt_spfli FROM gs_spfli.
+*      ENDLOOP.
+*    ENDIF.
+*  ENDIF.
+*ENDFORM.
+*
+*FORM fieldcat.
+*  CALL FUNCTION 'REUSE_ALV_FIELDCATALOG_MERGE'
+*    EXPORTING
+*      i_structure_name   = 'ZMT_SPFLI'  " Ensure this is the correct structure name
+*      i_bypassing_buffer = 'X'
+*    CHANGING
+*      ct_fieldcat        = gt_fieldcat
+*    EXCEPTIONS
+*      inconsistent_interface = 1
+*      program_error          = 2
+*      OTHERS                 = 3.
+*
+*  IF sy-subrc <> 0.
+*    MESSAGE |Error in field catalog: { sy-subrc }.| TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*
+*ENDFORM.
+*
+*FORM layout.
+*  gs_layout-zebra = 'X'.
+*  gs_layout-colwidth_optimize = 'X'.
+*ENDFORM.
+*
+*FORM display.
+*  PERFORM get_items.
+*  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+*   EXPORTING
+*     i_callback_program                = sy-repid
+*     i_callback_pf_status_set          = 'STATUS01'
+*     i_callback_user_command           = 'USERCOMMAND01'
+*     is_layout                         = gs_layout
+*     it_fieldcat                       = gt_fieldcat
+*    TABLES
+*      t_outtab                          = gt_spfli
+*   EXCEPTIONS
+*     program_error                     = 1
+*     OTHERS                            = 2
+*            .
+*  IF sy-subrc <> 0.
+*    MESSAGE | Error message is { sy-subrc }. | TYPE 'S' DISPLAY LIKE 'E'.
+*  ENDIF.
+*
+*ENDFORM.
+*
+*FORM status01 USING lv_extab TYPE slis_t_extab.
+*  SET PF-STATUS 'STATUS001'.
+*ENDFORM.
+*
+*FORM usercommand01 USING lv_ucomm TYPE sy-ucomm
+*                         ls_selfield TYPE slis_selfield.
+*
+*  CASE lv_ucomm.
+*    WHEN 'LEAVE'.
+*      LEAVE PROGRAM.
+*
+*    WHEN 'DIT'. " Custom logic for edit button
+*      LOOP AT gt_fieldcat INTO DATA(ls_fieldcat).
+*        IF ls_fieldcat-fieldname = 'CITYFROM' OR
+*           ls_fieldcat-fieldname = 'CITYTO'.
+*          ls_fieldcat-edit = 'X'.
+*          MODIFY gt_fieldcat FROM ls_fieldcat INDEX sy-tabix.
+*        ENDIF.
+*      ENDLOOP.
+*      PERFORM display.
+*
+*      WHEN 'UPDATE'. " Custom logic for save button
+*
+*       READ TABLE gt_spfli INTO gs_spfli INDEX ls_selfield-tabindex.
+*       IF gs_spfli-cityfrom ne ls_selfield-value.
+*         gs_spfli-cityfrom = ls_selfield-value.
+*         UPDATE zmt_spfli FROM gs_spfli.
+*       ELSEIF gs_spfli-cityto ne ls_selfield-value.
+*         gs_spfli-cityfrom = ls_selfield-value.
+*         UPDATE zmt_spfli FROM gs_spfli.
+*       ENDIF.
+*
+*  PERFORM display.
+*
+*
+*  ENDCASE.
+*
+*ENDFORM.

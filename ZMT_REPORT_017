@@ -1,0 +1,150 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_023
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmt_report_023.
+
+INCLUDE zmt_report_023_top.
+
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_REPORT_023_TOP
+**&---------------------------------------------------------------------*
+**
+*DATA: gt_scarr TYPE zmt_tt_scarr,
+*      gs_scarr TYPE scarr,
+*      gv_id    TYPE s_carr_id,
+*      gt_fcat  TYPE lvc_t_fcat,
+*      gs_layo  TYPE lvc_s_layo,
+*      go_alv   TYPE REF TO cl_gui_alv_grid,
+*      go_cont  TYPE REF TO cl_gui_custom_container.
+
+START-OF-SELECTION.
+
+  CALL SCREEN 0100.
+
+MODULE status_0100 OUTPUT.
+  SET PF-STATUS 'PF_STATUS0100'.
+  SET TITLEBAR 'TITLE0100'.
+
+  PERFORM get_items.
+  PERFORM fcat.
+  PERFORM layo.
+  PERFORM display.
+
+ENDMODULE.
+
+MODULE user_command_0100 INPUT.
+
+  CASE sy-ucomm.
+    WHEN 'LEAVE'.
+      LEAVE PROGRAM.
+    WHEN 'BTN_ID'.
+      PERFORM get_scarr.
+
+  ENDCASE.
+
+ENDMODULE.
+
+FORM get_scarr .
+ "CLEAR: gt_scarr.
+  SELECT * FROM scarr INTO TABLE gt_scarr WHERE carrid EQ gv_id.
+  IF sy-subrc IS NOT INITIAL.
+    PERFORM error.
+  ENDIF.
+ENDFORM.
+
+FORM fcat .
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+    EXPORTING
+      i_structure_name       = 'SCARR'
+      i_bypassing_buffer     = abap_true
+    CHANGING
+      ct_fieldcat            = gt_fcat
+    EXCEPTIONS
+      inconsistent_interface = 1
+      program_error          = 2
+      OTHERS                 = 3.
+  IF sy-subrc <> 0.
+    PERFORM error.
+  ENDIF.
+
+ENDFORM.
+
+FORM layo .
+  gs_layo-zebra = 'X'.
+  gs_layo-sel_mode = 'A'.
+  gs_layo-cwidth_opt = 'X'.
+ENDFORM.
+
+FORM display .
+
+  IF go_alv IS INITIAL.
+
+    CREATE OBJECT go_cont
+      EXPORTING
+        container_name              = 'CC_ALV'
+      EXCEPTIONS
+        cntl_error                  = 1
+        cntl_system_error           = 2
+        create_error                = 3
+        lifetime_error              = 4
+        lifetime_dynpro_dynpro_link = 5
+        OTHERS                      = 6.
+    IF sy-subrc <> 0.
+      PERFORM error.
+    ENDIF.
+
+    CREATE OBJECT go_alv
+      EXPORTING
+        i_parent          = go_cont
+      EXCEPTIONS
+        error_cntl_create = 1
+        error_cntl_init   = 2
+        error_cntl_link   = 3
+        error_dp_create   = 4
+        OTHERS            = 5.
+    IF sy-subrc <> 0.
+      PERFORM error.
+    ENDIF.
+
+    go_alv->set_table_for_first_display(
+      EXPORTING
+        is_layout                     =    gs_layo
+      CHANGING
+        it_outtab                     =    gt_scarr
+        it_fieldcatalog               =    gt_fcat
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4
+    ).
+    IF sy-subrc <> 0.
+      PERFORM error.
+    ENDIF.
+  ENDIF.
+
+
+  go_alv->refresh_table_display(
+    EXCEPTIONS
+      finished       = 1
+      OTHERS         = 2
+      ).
+  IF sy-subrc <> 0.
+    PERFORM error.
+  ENDIF.
+
+ENDFORM.
+
+FORM error .
+  MESSAGE | Error  | TYPE 'I' DISPLAY LIKE 'E'.
+ENDFORM.
+
+FORM get_items .
+
+ IF gt_scarr IS INITIAL.
+    SELECT * FROM scarr INTO TABLE gt_scarr.
+ ENDIF.
+
+ENDFORM.

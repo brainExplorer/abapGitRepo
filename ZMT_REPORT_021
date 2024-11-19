@@ -1,0 +1,28 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_027
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZMT_REPORT_027.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME NO INTERVALS.
+  PARAMETERS: p_rb1 RADIOBUTTON GROUP x,
+              p_rb2 RADIOBUTTON GROUP x,
+              p_rb3 RADIOBUTTON GROUP x,
+              p_rb4 RADIOBUTTON GROUP x,
+              p_rb5 RADIOBUTTON GROUP x.
+SELECTION-SCREEN END OF BLOCK b1.
+
+START-OF-SELECTION.
+
+IF p_rb1 IS NOT INITIAL.
+  MESSAGE s000(zmt_msgclss_01).
+ELSEIF p_rb2 IS NOT INITIAL.
+  MESSAGE w001(zmt_msgclss_01).
+ELSEIF p_rb3 IS NOT INITIAL.
+  MESSAGE e002(zmt_msgclss_01).
+ELSEIF p_rb4 IS NOT INITIAL.
+  MESSAGE i003(zmt_msgclss_01).
+ELSE.
+  MESSAGE i004(zmt_msgclss_01) WITH '500' 'Numbed Info'.
+ENDIF.

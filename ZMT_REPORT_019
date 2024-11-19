@@ -1,0 +1,103 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_025
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmt_report_025.
+TABLES: sflight.
+
+DATA: lt_flights  TYPE TABLE OF sflight,
+      lt_fieldcat TYPE lvc_t_fcat,   " Field catalog table
+      ls_fieldcat TYPE lvc_s_fcat,   " Field catalog line
+      lt_layout   TYPE lvc_s_layo.     " Layout structure
+
+FIELD-SYMBOLS: <fs_fieldcat> TYPE lvc_s_fcat.
+
+* Selection screen for filtering
+SELECT-OPTIONS: s_cid FOR sflight-carrid.
+
+START-OF-SELECTION.
+
+* Retrieve flight data with selection criteria
+  SELECT * FROM sflight INTO TABLE lt_flights WHERE carrid IN s_cid.
+
+* Build the field catalog dynamically
+  PERFORM build_field_catalog USING lt_flights CHANGING lt_fieldcat.
+
+* Customize the ALV layout
+  PERFORM configure_layout CHANGING lt_layout.
+
+* Display the ALV grid with customized settings
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY_LVC'
+    EXPORTING
+      it_fieldcat   = lt_fieldcat
+      is_layout     = lt_layout
+    TABLES
+      t_outtab      = lt_flights
+    EXCEPTIONS
+      program_error = 1
+      OTHERS        = 2.
+  IF sy-subrc <> 0.
+    MESSAGE 'Error displaying ALV' TYPE 'E'.
+  ENDIF.
+
+*&---------------------------------------------------------------------*
+*&      Form  BUILD_FIELD_CATALOG
+*&---------------------------------------------------------------------*
+FORM build_field_catalog USING it_table TYPE ANY TABLE CHANGING ct_fieldcat TYPE lvc_t_fcat.
+  DATA: lt_components TYPE TABLE OF abap_compdescr,
+        ls_component  TYPE abap_compdescr.
+
+  FIELD-SYMBOLS: <ls_data> TYPE any,
+                 <ls_row>  TYPE any.
+
+  " Loop through the structure components of the table's row type
+  LOOP AT it_table ASSIGNING <ls_row>.
+   APPEND <ls_row> TO lt_fieldcat.
+  ENDLOOP.
+
+  " Manually define field catalog entries for important columns
+  " CARRID column with custom header text
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'CARRID'.
+  ls_fieldcat-outputlen = 10.
+  ls_fieldcat-key       = 'X'.
+  APPEND ls_fieldcat TO ct_fieldcat.
+
+  " CONNID column with editable setting
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'CONNID'.
+  ls_fieldcat-edit      = 'X'.  " Make it editable
+  ls_fieldcat-outputlen = 5.
+  APPEND ls_fieldcat TO ct_fieldcat.
+
+  " PRICE column with currency formatting
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname   = 'PRICE'.
+  ls_fieldcat-edit        = 'X'.
+  ls_fieldcat-outputlen   = 10.
+  ls_fieldcat-cfieldname  = 'CURR'." Link to currency field
+  APPEND ls_fieldcat TO ct_fieldcat.
+
+  " CURRENCY column, hidden but used for currency reference
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'CURR'.
+  ls_fieldcat-no_out    = 'X'. " Hide in ALV display
+  APPEND ls_fieldcat TO ct_fieldcat.
+
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  CONFIGURE_LAYOUT
+*&---------------------------------------------------------------------*
+FORM configure_layout CHANGING pt_layout TYPE lvc_s_layo.
+  CLEAR pt_layout.
+  pt_layout-zebra           = 'X'.   " Zebra pattern for row background
+  pt_layout-edit            = 'X'.   " Enable editing
+  pt_layout-grid_title      = 'Flight Information - Editable'.
+  pt_layout-cwidth_opt      = 'X'.   " Optimize column width
+  pt_layout-sel_mode        = 'A'.   " Allow multiple row selection
+  pt_layout-box_fname       = 'CHECKBOX'.  " Enable checkbox column for selection
+  pt_layout-col_opt         = 'X'.   " Column width optimization
+
+ENDFORM.

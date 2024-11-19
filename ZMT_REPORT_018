@@ -1,0 +1,25 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_024
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZMT_REPORT_024.
+DATA: lv_message TYPE string.
+
+START-OF-SELECTION.
+
+* Attempt to submit the first report
+SUBMIT zmt_syf277_3 AND RETURN.
+IF sy-subrc <> 0.
+  MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 INTO lv_message.
+  WRITE: / 'Error in ZMT_SYF277_3:', lv_message.
+ENDIF.
+
+* Attempt to submit the second report
+SUBMIT ZMT_ALISTIRMA_051 AND RETURN.
+IF sy-subrc <> 0.
+  MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 INTO lv_message.
+  WRITE: / 'Error in ZMT_ALISTIRMA_051:', lv_message.
+ENDIF.

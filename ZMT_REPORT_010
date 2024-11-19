@@ -1,0 +1,118 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_010
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmt_report_010.
+
+*Al##t#rma – 9: Yeni bir database tablosu olu#turun. (Örne#in ZCM_SCARR) Satir yap#s# SCARR database
+*tablosu ile tamamen ayni olsun. Daha sonra yeni bir rapor olu#turun ve SCARR tablosundaki bütün
+*bilgileri okuyup olu#turdu#unuz yeni database tablosu içine kaydedin. Olu#turdu#unuz ve içini
+*doldurdu#unuz tablodaki bütün sat#rlar# okuyup ALV’sini gösterin. SE41 i#lem kodu yard#m#yla SAP’ye
+*ait PF_Status objesinin kopyas#n# olu#turun ve ALV fonksiyonu içerisinde kullan#n. Kopya PF-Status
+*içinde yeni bir buton olu#turun ve bas#ld###nda kullan#c#dan birer adet CARRID, CARRNAME,
+*CURRCODE ve URL als#n. Al#nan veriyi kullanarak database tablosuna yeni bir satir ekleyin ve ALV’yi
+*yenileyin.
+
+DATA: gs_scarr TYPE scarr,
+      gt_fieldcat TYPE  slis_t_fieldcat_alv,
+      gs_layout   TYPE  slis_layout_alv,
+      gv_carrid   TYPE  s_carr_id,
+      gv_carrname TYPE  s_carrname,
+      gv_currcode TYPE  s_currcode,
+      gv_carrurl  TYPE  s_carrurl,
+      gt_scarr    TYPE TABLE OF scarr.
+
+START-OF-SELECTION.
+
+PERFORM get_table.
+PERFORM fieldcat.
+PERFORM layout.
+PERFORM display.
+
+
+FORM mt_pf_status USING ls_extab TYPE slis_t_extab.
+  SET PF-STATUS 'STATUS02'.
+ENDFORM.
+
+FORM mt_user_command USING lv_ucomm TYPE sy-ucomm
+                           ls_selfield TYPE slis_selfield.
+  CASE lv_ucomm.
+    WHEN 'LEAVE'.
+      LEAVE TO SCREEN 0.
+    WHEN 'ADDROW'.
+     CALL FUNCTION 'ZMT_FM_03'
+      IMPORTING
+        ev_carrid         =  gv_carrid
+        ev_carrname       =  gv_carrname
+        ev_currcode       =  gv_currcode
+        ev_carrurl        =  gv_carrurl
+               .
+     gs_scarr-carrid     = gv_carrid.
+     gs_scarr-carrname   = gv_carrname.
+     gs_scarr-currcode   = gv_currcode.
+     gs_scarr-url        = gv_carrurl.
+
+     APPEND gs_scarr TO gt_scarr.
+     modify zmt_scarr FROM TABLE gt_scarr.
+     clear: gs_scarr.
+
+     IF sy-subrc eq 0.
+       MESSAGE  | New row insert the table succesfully. | TYPE 'S'.
+     else.
+       MESSAGE | Something went wrongs. | TYPE 'S' DISPLAY LIKE 'E'.
+     ENDIF.
+
+     PERFORM display.
+
+
+  ENDCASE.
+ENDFORM.
+
+FORM get_table .
+  SELECT * FROM zmt_scarr INTO TABLE gt_scarr.
+ENDFORM.
+
+FORM fieldcat .
+    CALL FUNCTION 'REUSE_ALV_FIELDCATALOG_MERGE'
+    EXPORTING
+*      I_PROGRAM_NAME               = sy-repid
+*      I_INTERNAL_TABNAME           =
+      i_structure_name             = 'ZMT_SCARR'
+      i_bypassing_buffer           = abap_true
+
+     CHANGING
+       ct_fieldcat                  = gt_fieldcat
+    EXCEPTIONS
+      inconsistent_interface       = 1
+      program_error                = 2
+      OTHERS                       = 3
+             .
+   IF sy-subrc <> 0.
+      MESSAGE | Error code : { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+   ENDIF.
+ENDFORM.
+
+FORM layout .
+  gs_layout-zebra = abap_true.
+  gs_layout-colwidth_optimize = abap_true.
+ENDFORM.
+
+FORM display .
+    CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+   EXPORTING
+     i_callback_program                = sy-repid
+     i_callback_pf_status_set          = 'MT_PF_STATUS'
+     i_callback_user_command           = 'MT_USER_COMMAND'
+     is_layout                         = gs_layout
+     it_fieldcat                       = gt_fieldcat
+    TABLES
+      t_outtab                          = gt_scarr
+   EXCEPTIONS
+     program_error                     = 1
+     OTHERS                            = 2
+            .
+  IF sy-subrc <> 0.
+    MESSAGE | Occured an error and return code with { sy-subrc } | TYPE 'S' DISPLAY LIKE 'E'.
+  ENDIF.
+ENDFORM.

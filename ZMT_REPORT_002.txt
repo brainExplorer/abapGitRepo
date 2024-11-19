@@ -1,0 +1,23 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_REPORT_002
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZMT_REPORT_002.
+DATA: gt_travel TYPE TABLE OF stravelag,
+      gs_travel TYPE stravelag.
+
+START-OF-SELECTION.
+
+SELECT * from stravelag into TABLE gt_travel.
+
+LOOP AT gt_travel INTO gs_travel.
+ INSERT INTO zmt_stravelag VALUES gs_travel.
+ clear: gs_travel.
+ENDLOOP.
+
+IF sy-subrc <> 0.
+  MESSAGE 'Occours an error while inserting items.' TYPE 'S' DISPLAY LIKE 'E'.
+else.
+  MESSAGE 'All items inserted successfully.' TYPE 'S'.
+ENDIF.
