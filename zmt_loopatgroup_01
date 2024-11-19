@@ -1,0 +1,54 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_LOOPATGROUP_01
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmt_loopatgroup_01.
+
+TYPES: BEGIN OF gty_table,
+         artist       TYPE char20,
+         album        TYPE char20,
+         genre        TYPE char10,
+         release_year TYPE i,
+         duration     TYPE i,
+       END OF gty_table.
+
+DATA: gt_table TYPE TABLE OF gty_table,
+      gv_duration TYPE i,
+      gv_avg_duration TYPE p DECIMALS 2.
+
+gt_table = VALUE #(
+  ( artist = 'The Beatles'     album = 'Abbey Road'       genre = 'Rock' release_year = 1969 duration = 4 )
+  ( artist = 'Miles Davis'     album = 'Kind of Blue'     genre = 'Jazz' release_year = 1959 duration = 3 )
+  ( artist = 'Pink Floyd'      album = 'The Dark Side'    genre = 'Rock' release_year = 1973 duration = 8 )
+  ( artist = 'Michael Jackson' album = 'Thriller'         genre = 'Pop'  release_year = 1982 duration = 5 )
+  ( artist = 'Led Zeppelin'    album = 'Led Zeppelin IV'  genre = 'Rock' release_year = 1971 duration = 7 )
+  ( artist = 'John Coltrane'   album = 'A Love Supreme'   genre = 'Jazz' release_year = 1965 duration = 6 )
+).
+
+
+LOOP AT gt_table INTO DATA(gs_table)
+  GROUP BY ( genre    = gs_table-genre
+             size     = GROUP SIZE
+             index    = GROUP INDEX )
+  ASCENDING ASSIGNING FIELD-SYMBOL(<fs_table>).
+
+  CLEAR gv_duration.
+
+  WRITE: / | Group: { <fs_table>-index }, Genre: { <fs_table>-genre }, Group Size: { <fs_table>-size } |.
+
+  LOOP AT GROUP <fs_table> ASSIGNING FIELD-SYMBOL(<fs_artist>).
+    gv_duration = gv_duration + <fs_artist>-duration.
+    WRITE: / | Group { <fs_table>-index } Values: Artist: { <fs_artist>-artist },  Album: { <fs_artist>-album },  Genre: { <fs_artist>-genre },  Release Year: { <fs_artist>-release_year },  Duration: { <fs_artist>-duration }|.
+  ENDLOOP.
+
+  IF <fs_table>-size > 0.
+    gv_avg_duration = gv_duration / <fs_table>-size.
+    WRITE: / | Average Duration: { gv_avg_duration } minutes |.
+  ELSE.
+    WRITE: / | No entries in group to calculate average. |.
+  ENDIF.
+
+  SKIP.
+  ULINE.
+ENDLOOP.

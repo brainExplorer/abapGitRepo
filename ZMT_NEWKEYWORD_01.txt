@@ -1,0 +1,78 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_NEWKEYWORD_01
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmt_newkeyword_01.
+
+CLASS zmt_example DEFINITION.
+  PUBLIC SECTION.
+    DATA: id TYPE i, artist TYPE char20.
+    METHODS: constructor IMPORTING iv_id TYPE i iv_artist TYPE char20.
+    METHODS: get_id RETURNING VALUE(rv_id) TYPE i,
+             get_artist RETURNING VALUE(rv_artist) TYPE char20.
+ENDCLASS.
+
+CLASS zmt_example IMPLEMENTATION.
+  METHOD constructor.
+    id = iv_id.
+    artist = iv_artist.
+  ENDMETHOD.
+
+  METHOD get_id.
+    rv_id = id.
+  ENDMETHOD.
+
+  METHOD get_artist.
+    rv_artist = artist.
+  ENDMETHOD.
+ENDCLASS.
+
+CLASS zmt_static DEFINITION.
+  PUBLIC SECTION.
+    CLASS-METHODS set_elements IMPORTING ic_example TYPE REF TO zmt_example.
+ENDCLASS.
+
+CLASS zmt_static IMPLEMENTATION.
+  METHOD set_elements.
+    IF ic_example IS NOT INITIAL.
+      " Use getter methods to access the data
+      DATA(id) = ic_example->get_id( ).
+      DATA(artist) = ic_example->get_artist( ).
+      WRITE: / |ID: { id }, Artist: { artist }|.
+    ELSE.
+      WRITE: / 'Instance is not accessible or not created'.
+    ENDIF.
+  ENDMETHOD.
+ENDCLASS.
+
+START-OF-SELECTION.
+
+*DATA(go_class) = NEW zmt_example( ).
+
+*Anonymous Data Objects
+*DATA(go_class) = NEW zmt_example( iv_id = 1 iv_artist = 'Queen' ).
+
+*DATA: go_class TYPE REF TO zmt_example.
+*go_class = NEW zmt_example( iv_id = 1 iv_artist = 'Queen' ).
+
+*WRITE / | Artist: { go_class->artist } |.
+
+
+" With static methods
+" Create an instance of zmt_example and pass it to the static method
+
+*zmt_static=>set_elements( NEW zmt_example( iv_id = 5 iv_artist = 'Bob Sinclar' ) ).
+*zmt_static=>set_elements( go_class ).
+
+
+*Structure imp.
+*TYPES: BEGIN OF gty_table,
+*         id     TYPE i,
+*         artist TYPE char20,
+*       END OF gty_table.
+*
+** This definition directly read by write as structure. Value-New combination to
+** initialize the internal table with specific row.
+*DATA(gs_table) = VALUE gty_table( id = 1 artist = 'A##k Veysel' ).
+*WRITE: / |ID: { gs_table-id } Artist: { gs_table-artist }|.
