@@ -67,9 +67,12 @@ INCLUDE zmt_mm_03_event_class.
 *    IF sy-subrc = 0.
 *      CASE e_column_id.
 *        WHEN 'BANFN1'.
-*          lv_value = ls_row-banfn1.
-*          MESSAGE i000(zmt_message) WITH lv_value.
-*          CALL TRANSACTION 'ME23N' AND SKIP FIRST SCREEN.
+*          IF ls_row-banfn1 IS NOT INITIAL.
+*            lv_value = ls_row-banfn1.
+**          MESSAGE i000(zmt_message) WITH lv_value.
+*            SET PARAMETER ID 'BES' FIELD ls_row-banfn1.
+*            CALL TRANSACTION 'ME53N' AND SKIP FIRST SCREEN.
+*          ENDIF.
 *      ENDCASE.
 *    ENDIF.
 *  ENDMETHOD.
@@ -282,10 +285,10 @@ FORM f_check_data .
 
 *    APPEND gs_alv TO gt_alv.
     APPEND gs_alv TO gt_alv.
-    gt_alv_tmp = gt_alv.
-    CLEAR gs_alv.
 
+    CLEAR gs_alv.
   ENDLOOP.
+  gt_alv_tmp = gt_alv.
 ENDFORM.
 
 "Save data to BAPI
@@ -359,7 +362,7 @@ FORM save .
 
     CLEAR: lt_return, lv_number.
     "EBAN tablosunda bulabiliriz,
-    "lv_number ile ME52N ve ME53N'de görüntüleyebilriiz.
+    "lv_number ile ME52N ve ME53N'de g r nt leyebilriiz.
     "BAPI_PR_CREATE de ME51N i#lem kodunun bapisidir.
     CALL FUNCTION 'BAPI_PR_CREATE'
       EXPORTING
@@ -377,7 +380,7 @@ FORM save .
     LOOP AT lt_return INTO DATA(ls_return) WHERE type CA 'EAX'.
       EXIT.
     ENDLOOP.
-    IF sy-subrc = 0."hatal# kay#t döndü ise
+    IF sy-subrc = 0."hatal# kay#t d nd  ise
       LOOP AT gt_alv INTO ls_alv WHERE banfn EQ ls_alv_tek-banfn.
         ls_alv-light = icon_red_light.
         ls_alv-messg = ls_return-message.
@@ -417,11 +420,6 @@ FORM save .
         MODIFY gt_alv FROM ls_alv.
       ENDLOOP.
     ENDIF.
-
-    IF lo_event_handler IS INITIAL.
-      CREATE OBJECT lo_event_handler.
-    ENDIF.
-    SET HANDLER lo_event_handler->handle_hotspot_click FOR go_alv.
 
     CALL METHOD cl_gui_cfw=>flush.
     CALL METHOD go_alv->refresh_table_display
@@ -591,6 +589,11 @@ FORM display_container_alv .
 
   ENDIF.
 
+    IF lo_event_handler IS INITIAL.
+      CREATE OBJECT lo_event_handler.
+    ENDIF.
+    SET HANDLER lo_event_handler->handle_hotspot_click FOR go_alv.
+
   go_alv->refresh_table_display(
     EXCEPTIONS
       finished       = 1
@@ -631,14 +634,14 @@ ENDMODULE.
 
 FORM save_selected_rows .
 
-  DATA: ls_header  TYPE bapimereqheader,
-        ls_headerx TYPE bapimereqheaderx,
-        lv_number  TYPE bapimereqheader-preq_no,
-        lt_return  TYPE TABLE OF bapiret2,
-        lt_pritem  TYPE TABLE OF bapimereqitemimp,
-        ls_pritem  TYPE bapimereqitemimp,
-        lt_pritemx TYPE TABLE OF bapimereqitemx,
-        ls_pritemx TYPE bapimereqitemx,
+  DATA: ls_header        TYPE bapimereqheader,
+        ls_headerx       TYPE bapimereqheaderx,
+        lv_number        TYPE bapimereqheader-preq_no,
+        lt_return        TYPE TABLE OF bapiret2,
+        lt_pritem        TYPE TABLE OF bapimereqitemimp,
+        ls_pritem        TYPE bapimereqitemimp,
+        lt_pritemx       TYPE TABLE OF bapimereqitemx,
+        ls_pritemx       TYPE bapimereqitemx,
         lt_selected_rows TYPE lvc_t_row,
         lv_row_index     TYPE lvc_index,
         ls_alv           TYPE zmt_mm_tbl01. " Replace with actual structure.
@@ -756,4 +759,5 @@ FORM save_selected_rows .
         finished = 1
         OTHERS   = 2.
   ENDLOOP.
+
 ENDFORM.
