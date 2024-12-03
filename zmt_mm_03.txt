@@ -1,0 +1,759 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_MM_03
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmt_mm_03.
+
+TABLES: sscrfields, zmt_mm_table. "System structure to manage custom function keys on the selection screen.
+
+INCLUDE zmt_mm_03_top.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_MM_03_TOP
+**&---------------------------------------------------------------------*
+*TYPES: BEGIN OF gty_excel,
+*         banfn(20),
+*         bnfpo(20),
+*         ekgrp(20),
+*         matnr(20),
+*         werks(20),
+*         lgort(20),
+*         menge(20),
+*         meins(20),
+*         badat(20),
+*         lfdat(20),
+*       END OF gty_excel.
+*
+*DATA:gv_file_name      TYPE string,       "File name input by user
+*     gt_excel          TYPE TABLE OF gty_excel,
+*     gt_fcat           TYPE lvc_t_fcat,
+*     gs_layo           TYPE lvc_s_layo,
+*     gs_excel          TYPE gty_excel,
+*     gv_fpath          TYPE string,
+*     gv_path           TYPE string,
+*     gv_file_type      TYPE sdbad-funct,
+*     gt_alv            TYPE TABLE OF zmt_mm_tbl01,
+*     gt_alv_tmp        TYPE TABLE OF zmt_mm_tbl01,
+*     gs_alv            TYPE zmt_mm_tbl01,
+*     gs_alv_tmp        TYPE zmt_mm_tbl01,
+*     gt_itab           TYPE TABLE OF alsmex_tabline,
+*     go_alv            TYPE REF TO cl_gui_alv_grid,
+*     gt_exclude        TYPE ui_functions,
+*     gs_exclude        TYPE ui_func,
+*     go_container      TYPE REF TO cl_gui_docking_container.
+*
+*
+*SELECTION-SCREEN FUNCTION KEY 1. "Define a custom function key (F1) for the selection screen.
+*
+*SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-004 NO INTERVALS.
+*PARAMETERS: p_file TYPE rlgrap-filename. "Parameter to allow the user to input/select a file path.
+*SELECTION-SCREEN END OF BLOCK b1.       "End of the block definition.
+INCLUDE zmt_mm_03_event_class.
+**&---------------------------------------------------------------------*
+**&  Include           ZMT_MM_03_EVENT_CLASS
+**&---------------------------------------------------------------------*
+*CLASS lcl_event_handler DEFINITION.
+*  PUBLIC SECTION.
+*    METHODS: handle_hotspot_click FOR EVENT hotspot_click OF cl_gui_alv_grid
+*      IMPORTING e_row_id e_column_id es_row_no.
+*ENDCLASS.
+*
+*CLASS lcl_event_handler IMPLEMENTATION.
+*  METHOD handle_hotspot_click.
+*    DATA: lv_value TYPE string.
+*
+*    " Get the clicked row's data
+*    READ TABLE gt_alv INTO DATA(ls_row) INDEX e_row_id.
+*    IF sy-subrc = 0.
+*      CASE e_column_id.
+*        WHEN 'BANFN1'.
+*          lv_value = ls_row-banfn1.
+*          MESSAGE i000(zmt_message) WITH lv_value.
+*          CALL TRANSACTION 'ME23N' AND SKIP FIRST SCREEN.
+*      ENDCASE.
+*    ENDIF.
+*  ENDMETHOD.
+*ENDCLASS.
+*
+*DATA: lo_event_handler TYPE REF TO lcl_event_handler.
+
+INITIALIZATION.
+  "Combine the icon for a document and the text 'Download Template' into the function key text.
+  CONCATENATE icon_document 'Download Template' INTO sscrfields-functxt_01.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_file.
+  "Use a file browser to select the file path.
+  CALL FUNCTION 'F4_FILENAME'
+    IMPORTING
+      file_name = p_file
+    EXCEPTIONS
+      OTHERS    = 1.
+  IF sy-subrc <> 0.
+    MESSAGE 'Error selecting file' TYPE 'E'.
+  ENDIF.
+
+AT SELECTION-SCREEN.
+
+  "Check if function key F1 is triggered.
+  IF sscrfields-ucomm EQ 'FC01'. "FC01 corresponds to Function Key 1 (F1).
+    PERFORM handle_download.
+  ENDIF.
+
+START-OF-SELECTION.
+  PERFORM handle_upload.
+*  PERFORM f_convert_fill_alv_tab.
+  CALL SCREEN 100.
+*&---------------------------------------------------------------------*
+*& Form HANDLE_DOWNLOAD
+*&---------------------------------------------------------------------*
+FORM handle_download.
+  TRY.
+      CALL METHOD cl_gui_frontend_services=>file_save_dialog
+        EXPORTING
+          window_title              = 'File Directory'
+          default_extension         = 'XLS'
+          initial_directory         = 'C:\'
+        CHANGING
+          filename                  = gv_file_name
+          path                      = gv_path
+          fullpath                  = gv_fpath "Full file path
+        EXCEPTIONS
+          cntl_error                = 1
+          error_no_gui              = 2
+          not_supported_by_gui      = 3
+          invalid_default_file_name = 4
+          OTHERS                    = 5.
+      IF sy-subrc <> 0.
+        MESSAGE |Occurred an error while choosing file! Check your file and path.| TYPE 'I' DISPLAY LIKE 'E'.
+        EXIT.
+      ENDIF.
+
+      gv_file_name = gv_fpath.
+      CLEAR gt_excel.
+
+      " Assign proper titles to the fields in the first row
+      APPEND INITIAL LINE TO gt_excel ASSIGNING FIELD-SYMBOL(<fs_excel>).
+      <fs_excel>-banfn = 'Purchase Req. No.'.   " Purchase Requisition Number
+      <fs_excel>-bnfpo = 'Item No.'.            " Item Number of Purchase Requisition
+      <fs_excel>-ekgrp = 'Purchasing Group'.    " Purchasing Group
+      <fs_excel>-matnr = 'Material No.'.        " Material Number
+      <fs_excel>-werks = 'Plant'.               " Plant
+      <fs_excel>-lgort = 'Storage Location'.    " Storage Location
+      <fs_excel>-menge = 'Quantity'.            " Purchase Requisition Quantity
+      <fs_excel>-meins = 'Unit of Measure'.     " Unit of Measure
+      <fs_excel>-badat = 'Request Date'.        " Request Date
+      <fs_excel>-lfdat = 'Delivery Date'.       " Item Delivery Date
+
+      " Download the file
+      CALL METHOD cl_gui_frontend_services=>gui_download
+        EXPORTING
+          filename = gv_fpath
+          filetype = 'DAT'
+        CHANGING
+          data_tab = gt_excel
+        EXCEPTIONS
+          OTHERS   = 1.
+      IF sy-subrc = 0.
+        MESSAGE |File downloaded successfully!| TYPE 'I'.
+      ELSE.
+        MESSAGE 'Error during file download.' TYPE 'E'.
+        EXIT.
+      ENDIF.
+    CATCH cx_root INTO DATA(lx_error).
+      MESSAGE lx_error->get_text( ) TYPE 'E'.
+  ENDTRY.
+ENDFORM.
+
+
+FORM handle_upload.
+
+  TRY.
+      CALL FUNCTION 'ALSM_EXCEL_TO_INTERNAL_TABLE'
+        EXPORTING
+          filename                = p_file
+          i_begin_col             = 1
+          i_begin_row             = 2
+          i_end_col               = 10
+          i_end_row               = 50
+        TABLES
+          intern                  = gt_itab[]
+        EXCEPTIONS
+          inconsistent_parameters = 1
+          upload_ole              = 2
+          OTHERS                  = 3.
+      IF sy-subrc <> 0.
+        BREAK-POINT.
+      ENDIF.
+      LOOP AT gt_itab INTO DATA(ls_data).
+        ASSIGN COMPONENT ls_data-col OF STRUCTURE gs_excel TO FIELD-SYMBOL(<lfs_fld>).
+        <lfs_fld> = ls_data-value.
+        AT END OF row.
+          APPEND gs_excel TO gt_excel.
+        ENDAT.
+      ENDLOOP.
+
+*      PERFORM f_convert_fill_alv_tab.
+      PERFORM f_check_data.
+
+    CATCH cx_root INTO DATA(lx_root).
+      lx_root->get_text( ).
+  ENDTRY.
+
+ENDFORM.
+
+FORM f_check_data .
+
+*  gt_data
+  LOOP AT gt_excel INTO DATA(ls_data).
+
+    gs_alv-light = icon_yellow_light.
+    gs_alv-messg = 'Values ready to saving'.
+
+    gs_alv-banfn = ls_data-banfn.
+    gs_alv-bnfpo = ls_data-bnfpo.
+
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+      EXPORTING
+        input  = ls_data-ekgrp
+      IMPORTING
+        output = gs_alv-ekgrp.
+
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+      EXPORTING
+        input  = ls_data-matnr
+      IMPORTING
+        output = gs_alv-matnr.
+
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+      EXPORTING
+        input  = ls_data-werks
+      IMPORTING
+        output = gs_alv-werks.
+
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+      EXPORTING
+        input  = ls_data-lgort
+      IMPORTING
+        output = gs_alv-lgort.
+
+    TRANSLATE ls_data-menge USING ',.'.
+    gs_alv-menge = ls_data-menge.
+
+    gs_alv-meins = CONV meins( ls_data-meins ).
+*    CALL FUNCTION 'CONVERSION_EXIT_CUNIT_INPUT'
+*      EXPORTING
+*        input          = ls_data-meins
+**       LANGUAGE       = SY-LANGU
+*      IMPORTING
+*        output         = gs_alv-meins
+*      EXCEPTIONS
+*        unit_not_found = 1
+*        OTHERS         = 2.
+*    IF sy-subrc <> 0.
+** Implement suitable error handling here
+*    ENDIF.
+
+    gs_alv-badat = ls_data-badat+6(4) &&
+                   ls_data-badat+3(2) &&
+                   ls_data-badat(2).
+
+    gs_alv-lfdat = ls_data-lfdat+6(4) &&
+                   ls_data-lfdat+3(2) &&
+                   ls_data-lfdat(2).
+
+    SELECT SINGLE matnr
+      FROM mara
+      INTO @DATA(lv_matnr)
+    WHERE matnr EQ @gs_alv-matnr.
+    IF sy-subrc <> 0.
+      gs_alv-light = icon_red_light.
+      gs_alv-messg = 'Material is not available.'(006).
+    ENDIF.
+
+    SELECT SINGLE matnr
+      FROM marc
+      INTO lv_matnr
+      WHERE matnr EQ gs_alv-matnr
+    AND werks EQ gs_alv-werks.
+    IF sy-subrc <> 0.
+      gs_alv-light = icon_red_light.
+      gs_alv-messg = 'Material not defined at production site'(005).
+    ENDIF.
+
+*    APPEND gs_alv TO gt_alv.
+    APPEND gs_alv TO gt_alv.
+    gt_alv_tmp = gt_alv.
+    CLEAR gs_alv.
+
+  ENDLOOP.
+ENDFORM.
+
+"Save data to BAPI
+FORM save .
+
+  DATA: ls_header  TYPE bapimereqheader,
+        ls_headerx TYPE bapimereqheaderx,
+        lv_number  TYPE bapimereqheader-preq_no,
+        lt_return  TYPE TABLE OF bapiret2,
+        lt_pritem  TYPE TABLE OF bapimereqitemimp,
+        ls_pritem  TYPE bapimereqitemimp,
+        lt_pritemx TYPE TABLE OF bapimereqitemx,
+        ls_pritemx TYPE bapimereqitemx.
+
+  LOOP AT gt_alv TRANSPORTING NO FIELDS WHERE light EQ icon_red_light.
+    EXIT.
+  ENDLOOP.
+  IF sy-subrc = 0.
+    MESSAGE 'There is an issue on data'(001) TYPE 'S' DISPLAY LIKE 'E'.
+  ENDIF.
+
+  CALL METHOD go_alv->check_changed_data.
+
+*  "Check the date
+*  LOOP AT gt_alv INTO gs_alv.
+*    " Compare the initial value with the screen-modified value
+*    READ TABLE gt_alv_tmp INTO gs_alv_tmp INDEX sy-tabix.
+*    IF gs_alv-badat NE gs_alv_tmp-badat.
+*      EXIT.
+*    ENDIF.
+*  ENDLOOP.
+
+  DATA(lt_alv_tmp) = gt_alv[].
+  SORT lt_alv_tmp BY banfn.
+  DELETE ADJACENT DUPLICATES FROM lt_alv_tmp COMPARING banfn.
+
+  LOOP AT lt_alv_tmp INTO DATA(ls_alv_tek).
+    CLEAR: ls_headerx, ls_header.
+    ls_header-pr_type = 'NB'.
+
+    ls_headerx-pr_type = abap_true.
+
+    CLEAR: lt_pritem, lt_pritemx.
+    LOOP AT gt_alv INTO DATA(ls_alv) WHERE banfn EQ ls_alv_tek-banfn.
+      ls_pritem-preq_item     = ls_alv-bnfpo.
+      ls_pritem-pur_group     = ls_alv-ekgrp.
+      ls_pritem-material      = ls_alv-matnr.
+      ls_pritem-plant         = ls_alv-werks.
+      ls_pritem-store_loc     = ls_alv-lgort.
+      ls_pritem-quantity      = ls_alv-menge.
+      ls_pritem-unit          = ls_alv-meins.
+      ls_pritem-preq_date     = ls_alv-badat.
+      ls_pritem-deliv_date    = ls_alv-lfdat.
+      ls_pritem-preq_unit_iso = 'PCE'.
+      APPEND ls_pritem TO lt_pritem.
+      CLEAR ls_pritem.
+
+      ls_pritemx-preq_item     = ls_alv-bnfpo.
+      ls_pritemx-pur_group     = abap_true.
+      ls_pritemx-material      = abap_true.
+      ls_pritemx-plant         = abap_true.
+      ls_pritemx-store_loc     = abap_true.
+      ls_pritemx-quantity      = abap_true.
+      ls_pritemx-unit          = abap_true.
+      ls_pritemx-preq_date     = abap_true.
+      ls_pritemx-deliv_date    = abap_true.
+      ls_pritemx-preq_unit_iso = 'PCE'.
+      APPEND ls_pritemx TO lt_pritemx.
+      CLEAR ls_pritemx.
+    ENDLOOP.
+
+    CLEAR: lt_return, lv_number.
+    "EBAN tablosunda bulabiliriz,
+    "lv_number ile ME52N ve ME53N'de görüntüleyebilriiz.
+    "BAPI_PR_CREATE de ME51N i#lem kodunun bapisidir.
+    CALL FUNCTION 'BAPI_PR_CREATE'
+      EXPORTING
+        prheader  = ls_header
+        prheaderx = ls_headerx
+*       TESTRUN   =
+      IMPORTING
+        number    = lv_number
+*       PRHEADEREXP                  =
+      TABLES
+        return    = lt_return
+        pritem    = lt_pritem
+        pritemx   = lt_pritemx.
+
+    LOOP AT lt_return INTO DATA(ls_return) WHERE type CA 'EAX'.
+      EXIT.
+    ENDLOOP.
+    IF sy-subrc = 0."hatal# kay#t döndü ise
+      LOOP AT gt_alv INTO ls_alv WHERE banfn EQ ls_alv_tek-banfn.
+        ls_alv-light = icon_red_light.
+        ls_alv-messg = ls_return-message.
+        MODIFY gt_alv FROM ls_alv.
+      ENDLOOP.
+
+      CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+
+    ELSEIF sy-subrc <> 0."ba#ar#l# ise
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+        EXPORTING
+          wait = abap_true.
+
+      "database'e yazmas#n# bekleme
+*    wait UP TO 1 SECONDS.
+      DATA(lv_wait) = 0.
+      DO.
+        WAIT UP TO 1 SECONDS.
+
+        lv_wait = lv_wait + 1.
+        SELECT SINGLE banfn
+          FROM eban
+          INTO @DATA(lv_banfn)
+          WHERE banfn EQ @lv_number.
+        IF sy-subrc = 0.
+          EXIT.
+        ENDIF.
+        IF lv_wait = 10.
+          EXIT.
+        ENDIF.
+      ENDDO.
+
+      LOOP AT gt_alv INTO ls_alv WHERE banfn EQ ls_alv_tek-banfn.
+        ls_alv-light  = icon_green_light.
+        ls_alv-messg  = 'Document created'(002).
+        ls_alv-banfn1 = lv_number.
+        MODIFY gt_alv FROM ls_alv.
+      ENDLOOP.
+    ENDIF.
+
+    IF lo_event_handler IS INITIAL.
+      CREATE OBJECT lo_event_handler.
+    ENDIF.
+    SET HANDLER lo_event_handler->handle_hotspot_click FOR go_alv.
+
+    CALL METHOD cl_gui_cfw=>flush.
+    CALL METHOD go_alv->refresh_table_display
+* EXPORTING
+* IS_STABLE =
+* I_SOFT_REFRESH =
+      EXCEPTIONS
+        finished = 1
+        OTHERS   = 2.
+    IF sy-subrc <> 0.
+*--Exception handling
+    ENDIF.
+  ENDLOOP.
+
+ENDFORM.
+
+
+
+
+FORM f_convert_fill_alv_tab .
+  DATA: lv_index TYPE i.
+*  lv_index = lines( gt_alv ).
+  LOOP AT gt_excel INTO gs_excel.
+    gs_alv-light = icon_yellow_light.
+    gs_alv-banfn = gs_excel-banfn.
+    gs_alv-bnfpo = | { gs_excel-bnfpo ALPHA = IN } |.
+    gs_alv-ekgrp = gs_excel-ekgrp.
+    gs_alv-matnr = | { gs_excel-matnr ALPHA = IN } |.
+    gs_alv-werks = gs_excel-werks.
+    gs_alv-lgort = gs_excel-lgort.
+    TRANSLATE gs_excel-menge USING ',.'.
+    gs_alv-menge = gs_excel-menge.
+    gs_alv-meins = gs_excel-meins.
+
+    gs_alv-badat = gs_excel-badat+6(4) &&
+                   gs_excel-badat+3(2) &&
+                   gs_excel-badat(2).
+    gs_alv-lfdat = gs_excel-lfdat+6(4) &&
+                   gs_excel-lfdat+3(2) &&
+                   gs_excel-lfdat(2).
+    gs_alv-messg = 'Material ready to processing'(007).
+    APPEND gs_alv TO gt_alv.
+  ENDLOOP.
+
+
+
+ENDFORM.
+
+FORM call_container .
+  PERFORM set_fcat.
+  PERFORM set_layo.
+  PERFORM display_container_alv.
+ENDFORM.
+
+FORM set_fcat .
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+    EXPORTING
+      i_structure_name       = 'ZMT_MM_TBL01'
+    CHANGING
+      ct_fieldcat            = gt_fcat
+    EXCEPTIONS
+      inconsistent_interface = 1
+      program_error          = 2
+      OTHERS                 = 3.
+  IF sy-subrc <> 0.
+    MESSAGE 'Occured an error while LVC_FIELDCATALOG_MERGE processing!' TYPE 'I' DISPLAY LIKE 'E'.
+  ENDIF.
+
+  LOOP AT gt_fcat INTO DATA(ls_fcat).
+    CASE ls_fcat-fieldname.
+      WHEN 'LIGHT'.
+        ls_fcat-icon = 'X'.
+      WHEN 'BANFN1'.
+        ls_fcat-hotspot = 'X'.
+      WHEN 'BADAT'.
+        ls_fcat-edit = 'X'.
+    ENDCASE.
+    MODIFY gt_fcat FROM ls_fcat.
+    CLEAR ls_fcat.
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_layo .
+  gs_layo-zebra =      'X'.
+  gs_layo-cwidth_opt = 'X'.
+  gs_layo-sel_mode   = 'A'.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_CONTAINER_ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_container_alv .
+  IF go_container IS INITIAL.
+    CREATE OBJECT go_container
+      EXPORTING
+*       parent                      =     " Parent container
+        repid                       = sy-repid    " Report to Which This Docking Control is Linked
+        dynnr                       = sy-dynnr    " Screen to Which This Docking Control is Linked
+        side                        = go_container->dock_at_left    " Side to Which Control is Docked
+        extension                   = 2000    " Control Extension
+*       style                       =     " Windows Style Attributes Applied to This Docking Container
+*       lifetime                    = LIFETIME_DEFAULT    " Lifetime
+*       caption                     =     " Caption
+*       metric                      = 0    " Metric
+        ratio                       = 90    " Percentage of Screen: Takes Priority Over EXTENSION
+*       no_autodef_progid_dynnr     =     " Don't Autodefined Progid and Dynnr?
+*       name                        =     " Name
+      EXCEPTIONS
+        cntl_error                  = 1
+        cntl_system_error           = 2
+        create_error                = 3
+        lifetime_error              = 4
+        lifetime_dynpro_dynpro_link = 5
+        OTHERS                      = 6.
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                 WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ENDIF.
+
+    CREATE OBJECT go_alv
+      EXPORTING
+        i_parent          = go_container
+      EXCEPTIONS
+        error_cntl_create = 1
+        error_cntl_init   = 2
+        error_cntl_link   = 3
+        error_dp_create   = 4
+        OTHERS            = 5.
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                 WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ENDIF.
+
+    gs_exclude = cl_gui_alv_grid=>mc_fc_detail.
+    APPEND gs_exclude TO gt_exclude.
+
+    go_alv->set_table_for_first_display(
+      EXPORTING
+        is_layout                     = gs_layo    " Layout
+        it_toolbar_excluding          = gt_exclude   " Excluded Toolbar Standard Functions
+      CHANGING
+        it_outtab                     = gt_alv    " Output Table
+        it_fieldcatalog               = gt_fcat   " Field Catalog
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4
+    ).
+
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                 WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ENDIF.
+
+  ENDIF.
+
+  go_alv->refresh_table_display(
+    EXCEPTIONS
+      finished       = 1
+      OTHERS         = 2
+  ).
+  IF sy-subrc <> 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+               WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0100  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_0100 OUTPUT.
+  SET PF-STATUS 'MM03STATUS'.
+  SET TITLEBAR  'MM03TITLE'.
+  PERFORM call_container.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_0100 INPUT.
+  CASE sy-ucomm.
+    WHEN 'LEAVE'.
+      SET SCREEN 0.
+    WHEN 'SAVE'.
+      PERFORM save.
+    WHEN 'SELECTED'.
+      PERFORM save_selected_rows.
+  ENDCASE.
+
+ENDMODULE.
+
+FORM save_selected_rows .
+
+  DATA: ls_header  TYPE bapimereqheader,
+        ls_headerx TYPE bapimereqheaderx,
+        lv_number  TYPE bapimereqheader-preq_no,
+        lt_return  TYPE TABLE OF bapiret2,
+        lt_pritem  TYPE TABLE OF bapimereqitemimp,
+        ls_pritem  TYPE bapimereqitemimp,
+        lt_pritemx TYPE TABLE OF bapimereqitemx,
+        ls_pritemx TYPE bapimereqitemx,
+        lt_selected_rows TYPE lvc_t_row,
+        lv_row_index     TYPE lvc_index,
+        ls_alv           TYPE zmt_mm_tbl01. " Replace with actual structure.
+
+  " Get selected rows from ALV
+  CALL METHOD go_alv->get_selected_rows
+    IMPORTING
+      et_index_rows = lt_selected_rows.
+
+  IF lt_selected_rows IS INITIAL.
+    MESSAGE 'No rows selected.'(008) TYPE 'I'.
+    RETURN.
+  ENDIF.
+
+  CALL METHOD go_alv->check_changed_data.
+
+  " Prepare a temporary table to avoid duplicate BANFN processing
+  DATA(lt_alv_tmp) = gt_alv[].
+  SORT lt_alv_tmp BY banfn.
+  DELETE ADJACENT DUPLICATES FROM lt_alv_tmp COMPARING banfn.
+
+  LOOP AT lt_selected_rows INTO lv_row_index.
+    READ TABLE gt_alv INTO ls_alv INDEX lv_row_index.
+    IF sy-subrc <> 0.
+      CONTINUE.
+    ENDIF.
+
+    CLEAR: ls_headerx, ls_header.
+    ls_header-pr_type = 'NB'.
+
+    ls_headerx-pr_type = abap_true.
+
+    CLEAR: lt_pritem, lt_pritemx.
+    LOOP AT gt_alv INTO DATA(ls_alv_detail) WHERE banfn EQ ls_alv-banfn.
+      ls_pritem-preq_item     = ls_alv_detail-bnfpo.
+      ls_pritem-pur_group     = ls_alv_detail-ekgrp.
+      ls_pritem-material      = ls_alv_detail-matnr.
+      ls_pritem-plant         = ls_alv_detail-werks.
+      ls_pritem-store_loc     = ls_alv_detail-lgort.
+      ls_pritem-quantity      = ls_alv_detail-menge.
+      ls_pritem-unit          = ls_alv_detail-meins.
+      ls_pritem-preq_date     = ls_alv_detail-badat.
+      ls_pritem-deliv_date    = ls_alv_detail-lfdat.
+      ls_pritem-preq_unit_iso = 'PCE'.
+      APPEND ls_pritem TO lt_pritem.
+      CLEAR ls_pritem.
+
+      ls_pritemx-preq_item     = ls_alv_detail-bnfpo.
+      ls_pritemx-pur_group     = abap_true.
+      ls_pritemx-material      = abap_true.
+      ls_pritemx-plant         = abap_true.
+      ls_pritemx-store_loc     = abap_true.
+      ls_pritemx-quantity      = abap_true.
+      ls_pritemx-unit          = abap_true.
+      ls_pritemx-preq_date     = abap_true.
+      ls_pritemx-deliv_date    = abap_true.
+      ls_pritemx-preq_unit_iso = 'PCE'.
+      APPEND ls_pritemx TO lt_pritemx.
+      CLEAR ls_pritemx.
+    ENDLOOP.
+
+    CLEAR: lt_return, lv_number.
+    CALL FUNCTION 'BAPI_PR_CREATE'
+      EXPORTING
+        prheader  = ls_header
+        prheaderx = ls_headerx
+      IMPORTING
+        number    = lv_number
+      TABLES
+        return    = lt_return
+        pritem    = lt_pritem
+        pritemx   = lt_pritemx.
+
+    LOOP AT lt_return INTO DATA(ls_return) WHERE type CA 'EAX'.
+      EXIT.
+    ENDLOOP.
+    IF sy-subrc = 0.
+      LOOP AT gt_alv INTO ls_alv WHERE banfn EQ ls_alv-banfn.
+        ls_alv-light = icon_red_light.
+        ls_alv-messg = ls_return-message.
+        MODIFY gt_alv FROM ls_alv.
+      ENDLOOP.
+
+      CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+    ELSE.
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+        EXPORTING
+          wait = abap_true.
+
+      DATA(lv_wait) = 0.
+      DO.
+        WAIT UP TO 1 SECONDS.
+
+        lv_wait = lv_wait + 1.
+        SELECT SINGLE banfn
+          FROM eban
+          INTO @DATA(lv_banfn)
+          WHERE banfn EQ @lv_number.
+        IF sy-subrc = 0 OR lv_wait = 10.
+          EXIT.
+        ENDIF.
+      ENDDO.
+
+      LOOP AT gt_alv INTO ls_alv WHERE banfn EQ ls_alv-banfn.
+        ls_alv-light  = icon_green_light.
+        ls_alv-messg  = 'Document created'(002).
+        ls_alv-banfn1 = lv_number.
+        MODIFY gt_alv FROM ls_alv.
+      ENDLOOP.
+    ENDIF.
+
+    CALL METHOD cl_gui_cfw=>flush.
+    CALL METHOD go_alv->refresh_table_display
+      EXCEPTIONS
+        finished = 1
+        OTHERS   = 2.
+  ENDLOOP.
+ENDFORM.
