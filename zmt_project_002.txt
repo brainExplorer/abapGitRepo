@@ -1,0 +1,48 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_PROJECT_002
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmt_project_002.
+
+*Topics Covered:
+*- Internal tables and work areas.
+*- Field symbols and data references.
+*- Modularization: Subroutines and function modules.
+*- Table type and inline declarations
+
+DATA: gt_employees TYPE TABLE OF zmt_employee,
+      gs_employee  TYPE zmt_employee.
+
+START-OF-SELECTION.
+
+  "Fill internal table
+  SELECT *  FROM   zmt_employee INTO TABLE gt_employees.
+
+  " Loop through data
+  LOOP AT gt_employees INTO gs_employee.
+    WRITE: / gs_employee-id, gs_employee-name, gs_employee-surname, gs_employee-holidays.
+    ULINE.
+  ENDLOOP.
+
+  "Using field symbols
+
+  FIELD-SYMBOLS: <fs_employee> TYPE zmt_employee.
+
+  LOOP AT gt_employees ASSIGNING <fs_employee>.
+    <fs_employee>-holidays = 0.
+  ENDLOOP.
+
+  PERFORM display_employees USING gt_employees.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_EMPLOYEES
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_GT_EMPLOYEES  text
+*----------------------------------------------------------------------*
+FORM display_employees  USING    p_gt_employees TYPE zmt_tt_emp.
+  LOOP AT p_gt_employees INTO DATA(ls_employee).
+    WRITE: / ls_employee-id, ls_employee-name, ls_employee-surname, ls_employee-holidays.
+  ENDLOOP.
+ENDFORM.
