@@ -1,0 +1,57 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_PROJECT_001
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZMT_PROJECT_001.
+
+*ID	ZMC_DE_ID
+*NAME	ZMC_DE_NAME
+*SURNAME  ZMC_DE_SNAME
+*HOLIDAYS	ZMC_DE_HLDYS
+
+DATA: gt_employees TYPE TABLE OF zmt_employee,
+      gs_employee  TYPE zmt_employee,
+      gv_key       TYPE zmt_employee-id.
+
+PARAMETERS: p_id TYPE zmt_employee-id.
+
+START-OF-SELECTION.
+
+" Read data
+
+select * from zmt_employee into TABLE gt_employees WHERE id eq p_id.
+
+IF sy-subrc eq 0.
+  WRITE:/ 'Employee Details:'.
+  LOOP AT gt_employees INTO gs_employee.
+    WRITE: / gs_employee-id, gs_employee-name, gs_employee-surname, gs_employee-holidays.
+    ULINE.
+    SKIP.
+  ENDLOOP.
+ELSE.
+  WRITE: / 'No record found.'.
+ENDIF.
+
+" Insert data
+gs_employee-ID        = 5.
+gs_employee-NAME      = 'Alex'.
+gs_employee-SURNAME   = 'Xavier'.
+gs_employee-HOLIDAYS  = 5.
+
+IF sy-subrc eq 0.
+  WRITE: / 'Record inserted successfully.'.
+ENDIF.
+
+"Update data
+
+UPDATE zmt_employee set name = 'Jane' where id = 3.
+IF sy-subrc eq 0.
+  WRITE:/'Record updated successfully.'.
+ENDIF.
+
+" Delete data
+DELETE FROM zmt_employee where id = 3.
+IF sy-subrc eq 0.
+  write: /'Record deleted successfully.'.
+ENDIF.
