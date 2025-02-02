@@ -1,0 +1,57 @@
+*&---------------------------------------------------------------------*
+*& Report ZMT_DYNPRG
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmt_dynprg.
+
+DATA: gv_tabname    TYPE tabname,
+      gt_table      TYPE REF TO data,
+      gv_authorized TYPE abap_bool.
+
+PARAMETERS: p_tname TYPE tabname OBLIGATORY.
+
+START-OF-SELECTION.
+
+*get the current user
+
+  DATA(gv_userame) = sy-uname.
+
+  "check if the user has access to the table via s_tabu_dis
+
+  AUTHORITY-CHECK OBJECT 'S_TABU_DIS'
+           ID 'DICBERCLS' FIELD '03'  " 03 : Display activity
+           ID 'ACTVT' FIELD p_tname.
+  IF sy-subrc <> 0.
+    MESSAGE |No authorization for the requested table| TYPE 'I' DISPLAY LIKE 'E'.
+
+  ELSE.
+    gv_authorized = abap_true.
+  ENDIF.
+
+  " Dynamic table creation
+  TRY.
+      CREATE DATA gt_table TYPE TABLE OF (p_tname).
+      FIELD-SYMBOLS: <fs_table> TYPE ANY TABLE.
+
+      ASSIGN gt_table->* TO <fs_table>.
+
+      "Fetch data if authorization is granted
+      IF <fs_table> IS ASSIGNED AND gv_authorized = abap_true.
+        SELECT * FROM (p_tname) INTO TABLE <fs_table>.
+
+        MESSAGE |Data feched successfully! | TYPE 'I' DISPLAY LIKE 'S'.
+
+        LOOP AT <fs_table> ASSIGNING FIELD-SYMBOL(<row>).
+          WRITE: / <row>.
+        ENDLOOP.
+
+      ELSE.
+        MESSAGE |Table assignment failed or not authorized!| TYPE 'I' DISPLAY LIKE 'E'.
+      ENDIF.
+
+      CATCH cx_sy_create_data_error.
+        MESSAGE |Error: Invalid tabname or runtime issue.| TYPE 'I' DISPLAY LIKE 'E'.
+       CATCH cx_sy_open_sql_db.
+         MESSAGE |Error: Unable to fetch data from the table.| TYPE 'I' DISPLAY LIKE'E'.
+    ENDTRY.
